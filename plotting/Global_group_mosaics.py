@@ -36,7 +36,7 @@ axs = np.array([[ax1, ax2], [ax3, ax4], [ax5, ax6]])
 colors = pd.DataFrame({'Grains, roots, starchy carbohydrates' : "#E69F00",
                 'Legumes, beans, nuts' : "#F0E442",
                 'Fruit and vegetables' : "#009E73",
-                'Stimulants and spices' : "#56B4E9",
+                'Stimulants and spices' : "#F7322B",
                 'Ruminant meat' : "#D55E00", 
                 'Dairy and eggs' : "#0072B2",
                 'Poultry and pig meat' : "#CC79A7", 
@@ -46,7 +46,7 @@ colors = pd.DataFrame({'Grains, roots, starchy carbohydrates' : "#E69F00",
 colors2 = pd.DataFrame({'Grains, roots, starchy carbohydrates' : "#ffd066",
                 'Legumes, beans, nuts' : "#f7f1a1",
                 'Fruit and vegetables' : "#00ffba",
-                'Stimulants and spices' : "#a5d7f3",
+                'Stimulants and spices' : "#fb9b98",
                 'Ruminant meat' : "#ffaa66", 
                 'Dairy and eggs' : "#33b6ff",
                 'Poultry and pig meat' : "#e3b5ce", 
@@ -72,6 +72,8 @@ def label_formatting(label):
         label = label.replace("with the bone", "")
     if "Cashew" in label:
         label = "Cashews"
+    if "Maize" in label:
+        label = "Maize"
     if "Oil palm" in label:
         label = "Palm oil"
     return label
@@ -120,6 +122,8 @@ default_pad = 0.005
 other_condition = 10
 plot_order = []
 color_order = []
+group_c_order = []
+group_p_order = []
 
 # Top two axes: mosaics by group + item for 2010 and 2021
 for i, df in enumerate([df_2010, df_2021]):
@@ -141,6 +145,7 @@ for i, df in enumerate([df_2010, df_2021]):
     
     left = 0
     for _, row in df_grouped.iterrows():
+        g_c = []
         group_df = df[df["Group"] == row["Group"]].copy()
         group_df = group_df.sort_values("bd_opp_total", ascending=False)
         group_df["group_bd_opp_perc"] = group_df["bd_opp_total"] / group_df["bd_opp_total"].sum()
@@ -154,20 +159,23 @@ for i, df in enumerate([df_2010, df_2021]):
             others_row = pd.DataFrame({"Item": [f"Others_{row["Group"]}"], "Group": [row["Group"]], "bd_opp_total": [0], "Cons": [0], "group_bd_opp_perc": [others_sum]})
             group_df = pd.concat([group_df, others_row], ignore_index=True)
 
-        cmap = LinearSegmentedColormap.from_list("custom_cmap", [row["Color"], row["Color2"]])
+        cmap = LinearSegmentedColormap.from_list("custom_cmap", [row["Color"], row["Color2"]], N=len(group_df))
         up = 0
-
+        q = -1
         for j, item_row in group_df.iterrows():
             if item_row["group_bd_opp_perc"]-2*pad > 0:
-                rect = mpatches.Rectangle((left+xpad, up+pad), row["bd_opp_perc"]-2*xpad, item_row["group_bd_opp_perc"]-2*pad, color=cmap(up))
+                q+=1
+                rect = mpatches.Rectangle((left+xpad, up+pad), row["bd_opp_perc"]-2*xpad, item_row["group_bd_opp_perc"]-2*pad, color=cmap(q))
                 axs[0,i].add_patch(rect)
                 if i == 0:
                     plot_order.append(item_row["Item"])
-                    color_order.append(cmap(up))
+                    color_order.append(cmap(q))
+                    legend_plot = axs[1,1].plot([], [], color=cmap(q), lw=5)[0]
+                    g_c.append(legend_plot)
 
 
             text_color = "white" if row["Group"] == "Dairy and eggs" else "black"
-            if (row["bd_opp_perc"] > 0.1) and (item_row["group_bd_opp_perc"] > 0.05):
+            if (row["bd_opp_perc"] > 0.1) and (item_row["group_bd_opp_perc"] > 0.05) and (item_row["Item"] != "Raw milk of cattle"):
                 label = label_formatting(item_row["Item"])
                 axs[0,i].text(left + row["bd_opp_perc"]/2, up + item_row["group_bd_opp_perc"]/2, label, ha="center", va="center", fontsize=6, color=text_color)
 
@@ -177,6 +185,9 @@ for i, df in enumerate([df_2010, df_2021]):
             
             up += item_row["group_bd_opp_perc"]
         left += row["bd_opp_perc"]
+        if i == 0:
+            group_c_order.append(g_c)
+            group_p_order.append(row["Group"])
     
 
     axs[0, i].set_xlim(0,1)
@@ -188,6 +199,7 @@ axs[0,0].set_title("2010", fontsize=14)
 axs[0,1].set_title("2021", fontsize=14)
 plot_order.append("Sugar beet")
 color_order.append("#c7fb9d")
+group_c_order[-1].append(axs[1,1].plot([], [], color="#c7fb9d", linewidth=5)[0])
 
 
 # Middle two axes: Waterfall charts for bd change and consumption change
@@ -284,6 +296,14 @@ for _, row in df.iterrows():
     ax.plot(x2, y2, color=row["Color"], marker=(3,1,angle))
     # ax.annotate("", xytext=(x, y), xy=(x2, y2),
     #         arrowprops=dict(arrowstyle="->"))
+
+from matplotlib.legend_handler import HandlerTuple
+group_c_order = [tuple(k) for k in group_c_order]
+for i, k in enumerate(group_c_order): print(group_p_order[i],k[0].get_c())
+ax.legend(group_c_order, group_p_order,
+          fontsize=6,
+          handlelength=2.5,handler_map={tuple: HandlerTuple(ndivide=None)})
+
 ax.set_yscale("log")
 ax.set_xscale("log")
 # ax.set_xlim(df["Cons_2010"].min()*0.8, df["Cons_2021"].max()*1.4)
@@ -313,9 +333,21 @@ ax2.set_xscale('log')
 x1, x2 = ax.get_xlim()
 y1, y2 = ax.get_ylim()
 ax2.set_xlim(x1*y2, x2*y2)
-ax2.set_xlabel("Total Annual Extinctions per capita", color=total_grid_color)
+ax2.set_xlabel("Annual Extinctions per capita", color=total_grid_color)
 ax2.tick_params(axis='x', colors=total_grid_color)
 
+
+
+
+regions = pd.DataFrame({'Asia' : "#c2bf01ca",
+                'Europe' : "#2b56e2aa",
+                'Americas' : "#41d341c7",
+                'Africa' : "#ff0000aa",
+                'Oceania': "#f700ffaa",
+                }.items(), columns=["region", "Color"])
+
+region_map = pd.read_csv("../input_data/regions.csv")[["alpha-3", "region"]]
+region_map = region_map.merge(regions, on="region", how="left")
 
 # Plots 5 and 6
 ax = axs[2, 0]
@@ -420,6 +452,9 @@ ax2.set_ylim(1e0, 1e6)
 ax2.set_yscale("log")
 ax2.set_xscale("log")
 
+prod_max = Country_df_2010["Production_kg"].max()
+impact_max = Country_df_2010["E"].max()
+
 for country in Country_df_2021["ISO"].unique():
     try:
         row_2010 = Country_df_2010[Country_df_2010["ISO"]==country].iloc[0]
@@ -433,8 +468,12 @@ for country in Country_df_2021["ISO"].unique():
     y2 = row_2021["E_per_kg"]
     dx = x2 - x
     dy = y2 - y
-    line = ax.plot([x,x2],[y,y2])
-    color = line[0].get_color()
+    color = region_map.loc[region_map["alpha-3"]==country]["Color"].values[0]
+    if type(color)==float:
+        print(country)
+        color = "#ffffff00"
+    line = ax.plot([x,x2],[y,y2], color)
+    # color = line[0].get_color()
   
 
     def t1(z): return (ax.transData + ax.transAxes.inverted()).transform(z)
@@ -456,17 +495,20 @@ for country in Country_df_2021["ISO"].unique():
     if arrow_height+0.005 > l:
         arrow_height = l - 0.005
 
+    color = color[:-2] # REMOVE
+
     patch = mpatches.FancyArrow(x_axes,y_axes,dx_axes,dy_axes, width=0.001, ec=color, fc=color,
                                 linewidth=1, transform=ax.transAxes, length_includes_head=True,
                                 head_width=0.015, head_length=arrow_height)
-    ax.add_patch(patch)
 
     angle = math.atan2(dy_axes, dx_axes)*(180/np.pi)+90
     if angle > 90 and angle < 270:
         angle = angle - 180
 
     line[0].set_color("#00000000")
-    ax.text(*text_coords, s=row_2010["ISO"], fontsize=6, ha="center", va="center", color=color, rotation=angle)
+    if row_2010["E"] > impact_max/20 or row_2010["ISO"] in ["BRA", "CHN", "USA", "IND", "GBR", "NER", "POL"]: # REMOVE
+        ax.add_patch(patch)
+        ax.text(*text_coords, s=row_2010["ISO"], fontsize=6, ha="center", va="center", color=color, rotation=angle)
 
 
 
@@ -491,16 +533,23 @@ for country in Country_df_2021["ISO"].unique():
     if arrow_height+0.005 > l:
         arrow_height = l - 0.005
 
+    # alpha = 3*np.log10(row_2010["E"]) / np.log10(impact_max)
+    # temp.append(alpha)
+    # alpha = min(1.0, alpha)
+    # color = f"{color[:-2]}{int(alpha*255):02x}"
+
     patch = mpatches.FancyArrow(x_axes,y_axes,dx_axes,dy_axes, width=0.001, ec=color, fc=color,
                                 linewidth=1, transform=ax2.transAxes, length_includes_head=True,
                                 head_width=0.015, head_length=arrow_height)
-    ax2.add_patch(patch)
+    
 
     angle = math.atan2(dy_axes, dx_axes)*(180/np.pi)+90
     if angle > 90 and angle < 270:
         angle = angle - 180
    
-    ax2.text(*text_coords, s=row_2010["ISO"], fontsize=6, ha="center", va="center", color=color, rotation=angle)
+    if row_2010["E"] > impact_max/20 or row_2010["ISO"] in ["BRA", "CHN", "USA", "IND", "GBR", "NER", "POL"]: # REMOVE
+        ax2.add_patch(patch)
+        ax2.text(*text_coords, s=row_2010["ISO"], fontsize=6, ha="center", va="center", color=color, rotation=angle)
 
 
 
@@ -531,8 +580,8 @@ ax3.tick_params(axis='x', colors=total_grid_color)
     
 
 ax2.set_title("Change in Beef impact per kg between 2010 and 2021")
-ax2.set_ylabel(r"Biodiversity Opportunity Cost, Extinctions per m$^2$")
-ax2.set_xlabel(r"Land use efficiency, m$^2$ per kg")
+ax2.set_xlabel(r"Biodiversity Opportunity Cost, Extinctions per m$^2$")
+ax2.set_ylabel(r"Land use efficiency, m$^2$ per kg")
 
 x1, x2 = ax2.get_xlim()
 y1, y2 = ax2.get_ylim()
@@ -555,6 +604,8 @@ ax4.set_xlim(x1*y2, x2*y2)
 ax4.set_xlabel("Annual Extinctions per kg", color=total_grid_color)
 ax4.tick_params(axis='x', colors=total_grid_color)
 
+for _, row in regions.iterrows():
+    ax.plot([], [], color=row["Color"], label=row["region"])
+ax.legend(title=f"Region", fontsize=6)
 
-
-plt.savefig('../outputs/Global_group_mosaics.png', dpi=1200)
+plt.savefig('../outputs/Global_group_mosaics.png', dpi=600)
