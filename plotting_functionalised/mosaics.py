@@ -19,6 +19,7 @@ class Commodity:
         self.raw_vals = [0.,0.]
         self.errors = [0.,0.]
         self.cons = [0.,0.]
+        self.area = [0.,0.]
 
     def set_yval(self, i:int, value:float|int)->None:
         self.yvals[i] = value
@@ -31,6 +32,9 @@ class Commodity:
     
     def set_cons(self, i:int, value:float|int)->None:
         self.cons[i] = value
+    
+    def set_area(self, i:int, value:float|int)->None:
+        self.area[i] = value
 
 class Group:
     def __init__(self, name:str, n:int, color:str|tuple, color2:str|tuple)->None:
@@ -190,6 +194,8 @@ def define_commodities_and_colors(ax:Axes, group:Group, classify_as_other_limit:
         err1 = final_df[final_df["Item"] == item_name]["bd_opp_total_err"].values[0] if item_name in final_df["Item"].values else 0
         cons0 = item_row["Cons"]
         cons1 = final_df[final_df["Item"] == item_name]["Cons"].values[0] if item_name in final_df["Item"].values else 0
+        area0 = item_row["Pasture_m2"] + item_row["Arable_m2"]
+        area1 = final_df[final_df["Item"] == item_name]["Pasture_m2"].values[0] + final_df[final_df["Item"] == item_name]["Arable_m2"].values[0] if item_name in final_df["Item"].values else 0
         legend_plot = ax.plot([], [], color=cmap(m), lw=5, label="_")[0]
 
         commodity = Commodity(name=item_name, m=m, color=color)
@@ -201,6 +207,8 @@ def define_commodities_and_colors(ax:Axes, group:Group, classify_as_other_limit:
         commodity.set_errors(1, err1)
         commodity.set_cons(0, cons0)
         commodity.set_cons(1, cons1)
+        commodity.set_area(0, area0)
+        commodity.set_area(1, area1)
         commodity.line_object = legend_plot
         group.add_item(commodity)
     m+=1
@@ -258,15 +266,22 @@ def plot_mosaic(groups:list[Group], ax, i:int, i_larger:int, ratio:float)->None:
 
 def mosaic_plotting(ax1, ax2, df_2010, df_2021):
 
+        
 
-    i_larger, new_length_ratio = modify_axes(ax1, ax2, df_2010, df_2021)
 
     groups = define_groups_and_colors(df_2010, ORDER, COLORS, COLORS2)
     assign_group_data(groups, df_2010, 0)
     assign_group_data(groups, df_2021, 1)
-    for g in groups:
-        define_commodities_and_colors(ax2, g, classify_as_other_limit=0.05)
 
+    if type(ax1) == type(None) or type(ax2) == type(None):
+        for g in groups:
+            define_commodities_and_colors(plt.gca(), g, classify_as_other_limit=0.05)
+        return groups
+    
+    
+    for g in groups:
+            define_commodities_and_colors(ax2, g, classify_as_other_limit=0.05)
+    i_larger, new_length_ratio = modify_axes(ax1, ax2, df_2010, df_2021)
     plot_mosaic(groups, ax1, 0, i_larger, new_length_ratio)
     plot_mosaic(groups, ax2, 1, i_larger, new_length_ratio)
 
