@@ -121,6 +121,7 @@ def modify_axes(ax1, ax2, df_2010, df_2021):
         axis_to_change = ax1
     larger_total = max(total_2010, total_2021)
     smaller_total = min(total_2010, total_2021)
+    print(larger_total, smaller_total)
     new_length_ratio = np.sqrt(smaller_total / larger_total)
     delta = (1 - new_length_ratio)/2
 

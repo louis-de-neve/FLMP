@@ -7,92 +7,17 @@ import numpy as np
 from mosaics import mosaic_plotting, label_formatting, Group, Commodity
 from bar_change import bar_plot
 from cons_impact_scatter import cons_impact_plot
-from load_commodity import load_commodity
+from load_commodity import load_commodity, load_commodity_total
 from calculate_impacts import calculate_impacts
 from country_arrow_scatterplot import country_arrowplot
 from vectorplotting import country_vectorplot, commodity_vectorplot, feedpasture_vectorplot
-
+from figure_setups import get_axes
+from Ellipse_plot import ellipse_plot
 
 world_population_2010 = 6948574560
 world_population_2021 = 7927332080
 pops = [world_population_2010, world_population_2021]
 
-def six_axes_setup():
-    # Figure setup
-    fig = plt.figure(figsize=(10, 15))
-
-    fwidth = 0.5
-    fheight = 1/3
-    fpad = 0.1
-    xpad = fpad * fwidth
-    ypad = fpad * fheight
-    left_margin = 0.03
-
-    offset3 = 0.06
-    shift34 = 0.03
-
-    ax1 = fig.add_axes((xpad+left_margin, 2*fheight + ypad, fwidth - 2*xpad, fheight - 2*ypad))
-    ax2 = fig.add_axes((fwidth + xpad+left_margin/2, 2*fheight + ypad, fwidth - 2*xpad, fheight - 2*ypad))
-
-    ax3 = fig.add_axes((xpad+left_margin, fheight + ypad + offset3 + shift34, fwidth - 2*xpad, fheight - 2*ypad - offset3))
-    ax4 = fig.add_axes((fwidth + xpad+left_margin/2, fheight + ypad + shift34, fwidth - 2*xpad, fheight - 2*ypad))
-
-    ax5 = fig.add_axes((xpad+left_margin, ypad, fwidth - 2*xpad, fheight - 2*ypad))
-    ax6 = fig.add_axes((fwidth + xpad+left_margin/2, ypad, fwidth - 2*xpad, fheight - 2*ypad))
-
-    axs = np.array([[ax1, ax2], [ax3, ax4], [ax5, ax6]])
-    return fig, axs
-
-def four_axes_setup():
-    # Figure setup
-    fig = plt.figure(figsize=(10, 10))
-
-    fwidth = 0.5
-    fheight = 0.5
-    fpad = 0.1
-    xpad = fpad * fwidth
-    ypad = fpad * fheight
-    left_margin = 0.03
-
-    offset3 = 0.06
-    shift34 = 0.03
-
-
-    ax1 = fig.add_axes((xpad+left_margin, fheight + ypad, fwidth - 2*xpad, fheight - 2*ypad))
-    ax2 = fig.add_axes((fwidth + xpad+left_margin/2, fheight + ypad, fwidth - 2*xpad, fheight - 2*ypad))
-
-    ax3 = fig.add_axes((xpad+left_margin, ypad + offset3 + shift34, fwidth - 2*xpad, fheight - 2*ypad - offset3))
-    ax4 = fig.add_axes((fwidth + xpad+left_margin/2, ypad + shift34, fwidth - 2*xpad, fheight - 2*ypad - offset3/2))
-
-    axs = np.array([[ax1, ax2], [ax3, ax4]])
-    return fig, axs
-
-def single_axes_setup():
-    fig = plt.figure(figsize=(5, 5))
-    ax = fig.add_axes((0.15, 0.1, 0.8, 0.8))
-    return fig, ax
-
-def three_axes_setup():
-    # Figure setup
-    fig = plt.figure(figsize=(15, 5))
-
-    fwidth = 1/3
-    fheight = 1
-    fpad = 0.1
-    xpad = fpad * fwidth
-    ypad = fpad * fheight
-    left_margin = 0.03
-
-    offset3 = 0.06
-    shift34 = 0.03
-
-
-    ax1 = fig.add_axes((xpad+left_margin, ypad, fwidth - 2*xpad, fheight - 2*ypad))
-    ax2 = fig.add_axes((fwidth + xpad+left_margin/2, ypad, fwidth - 2*xpad, fheight - 2*ypad))
-    ax3 = fig.add_axes((fwidth*2 + xpad+left_margin/2, ypad, fwidth - 2*xpad, fheight - 2*ypad))
-
-    axs = np.array([ax1, ax2, ax3])
-    return fig, axs
 
 def get_region_map():
     regions = pd.DataFrame({'Asia' : "#df9903eb",
@@ -108,7 +33,7 @@ def get_region_map():
 
 def country_setup():
     c="CHN"
-    fig, axs = four_axes_setup()
+    fig, axs = get_axes(4)
     # Data import
     df_2010 = pd.read_csv(f'../results/{2010}/{c}/impacts_aggregated.csv')
     df_2021 = pd.read_csv(f'../results/{2021}/{c}/impacts_aggregated.csv')
@@ -125,7 +50,7 @@ def country_setup():
 
 def world_setup():
 
-    fig, axs = six_axes_setup()
+    fig, axs = get_axes(6)
     # Data import
     df_2010 = pd.read_csv(f'../results/{2010}/world_aggregate_impacts.csv')
     df_2021 = pd.read_csv(f'../results/{2021}/world_aggregate_impacts.csv')
@@ -144,29 +69,43 @@ def world_setup():
     regions, region_map = get_region_map()
 
     country_arrowplot(axs[2,0], country_df_2010, country_df_2021, region_map, regions, beef_cons_2010)
-    # country_vectorplot(axs[2,1], country_df_2010, country_df_2021, region_map)
-    commodity_vectorplot(axs[2,1], groups, pops)
+    country_vectorplot(axs[2,1], country_df_2010, country_df_2021, region_map)
+    # commodity_vectorplot(axs[2,1], groups, pops)
     plt.savefig('../outputs/Global_group_mosaics_vectors.png', dpi=600)
 
 def single_plot_setup():
-    fig, ax = single_axes_setup()
+    fig, axs = get_axes(2)
     
-    df_2010 = pd.read_csv(f'../results/{2010}/world_aggregate_impacts.csv')
-    df_2021 = pd.read_csv(f'../results/{2021}/world_aggregate_impacts.csv')
-
-    for col in ["bd_opp_total", "Cons", "bd_opp_total_err", "Pasture_m2", "Arable_m2"]:
-        df_2010[col] = df_2010[col] / world_population_2010
-        df_2021[col] = df_2021[col] / world_population_2021
-
-    groups = mosaic_plotting(None, None, df_2010, df_2021)
-    commodity_vectorplot(ax, groups, pops)
-
+    # CONSUMPTION BY COUNTRY
+    regions, region_map = get_region_map()
+    df_2010, df_2021 = load_commodity_total(True)
+    df_2010["m2_per_kg"] = df_2010["Area"]/df_2010["Cons"]
+    df_2021["m2_per_kg"] = df_2021["Area"]/df_2021["Cons"]
+    df_2010["E_per_m2"] = df_2010["bd_opp_total"] / (df_2010["Area"])
+    df_2021["E_per_m2"] = df_2021["bd_opp_total"] / (df_2021["Area"])
+    country_arrowplot(axs[0], df_2010, df_2021, region_map, regions, df_2010["Cons"].sum()*1000, (1e-7, 1), (1e-11, 1e-7), xvar="Cons_share", yvar="E_per_kg")
+    country_arrowplot(axs[1], df_2010, df_2021, region_map, regions, df_2010["Cons"].sum()*1000, (1e-12, 1e-8), (1e3, 1e6), xvar="E_per_m2", yvar="m2_per_kg")
+    axs[0].set_xlabel("Share of global consumption")
+    axs[0].set_title("Change in consumption impact between 2010 and 2021")
+    axs[1].set_xlabel("Biodiversity Opportunity Cost, Extinctions per kg")
+    axs[1].set_ylabel("Land Usage, m2 per kg")
+    axs[1].set_title("Change in consumption impact per kg between 2010 and 2021")
+    plt.savefig('../outputs/consumption_impacts_by_country.png', dpi=600)
     
 
-    plt.savefig('../outputs/commodity_vector_plot.png', dpi=600)
+
+    # COMMODITY VECTOR PLOT
+    # df_2010 = pd.read_csv(f'../results/{2010}/world_aggregate_impacts.csv')
+    # df_2021 = pd.read_csv(f'../results/{2021}/world_aggregate_impacts.csv')
+    # for col in ["bd_opp_total", "Cons", "bd_opp_total_err", "Pasture_m2", "Arable_m2"]:
+    #     df_2010[col] = df_2010[col] / world_population_2010
+    #     df_2021[col] = df_2021[col] / world_population_2021
+    # groups = mosaic_plotting(None, None, df_2010, df_2021)
+    # commodity_vectorplot(ax, groups, pops)
+    # plt.savefig('../outputs/commodity_vector_plot.png', dpi=600)
    
 def feed_pasture_vector_setup():
-    fig, axs = three_axes_setup()
+    fig, axs = get_axes(3)
     feed_df_2010, feed_df_2021, pasture_df_2010, pasture_df_2021 = load_commodity("Meat of cattle with the bone; fresh or chilled")
     beef_cons_2010 = pasture_df_2010["provenance"].sum()*1000
     country_df_2010, country_df_2021 = calculate_impacts(feed_df_2010, feed_df_2021, pasture_df_2010, pasture_df_2021)
@@ -179,4 +118,15 @@ def feed_pasture_vector_setup():
     axs[2].set_title("Total impact changes")
     plt.savefig('../outputs/feed_pasture_vectors.png', dpi=600)
 
-country_setup()
+def ellipse_setup():
+    fig, axs = get_axes(1)
+    regions, region_map = get_region_map()
+    df_2010, df_2021 = load_commodity_total(True)
+    df_2010["m2_per_kg"] = df_2010["Area"]/df_2010["Cons"]
+    df_2021["m2_per_kg"] = df_2021["Area"]/df_2021["Cons"]
+    df_2010["E_per_m2"] = df_2010["bd_opp_total"] / (df_2010["Area"])
+    df_2021["E_per_m2"] = df_2021["bd_opp_total"] / (df_2021["Area"])
+    ellipse_plot(axs[0], df_2010, df_2021, region_map, regions, df_2010["Cons"].sum()*1000, (1e-7, 1), (1e-11, 1e-7), xvar="Cons_share", yvar="E_per_kg")
+    plt.savefig('../outputs/ellipses.png', dpi=600)
+
+world_setup()

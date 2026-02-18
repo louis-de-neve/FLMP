@@ -4,9 +4,13 @@ import math
 import matplotlib.patches as mpatches
 
 
-def country_arrowplot(ax, country_df_2010, country_df_2021, region_map, regions, beef_cons_2010):
-    ax.set_xlim(1e-8, 1)
-    ax.set_ylim(5e-11, 2e-5)
+def country_arrowplot(ax, country_df_2010, country_df_2021, region_map, regions, cons_2010,
+                      xlims=(1e-8, 1),
+                      ylims=(5e-11, 2e-5),
+                      xvar="Cons_share", yvar="E_per_kg"
+                      ):
+    ax.set_xlim(*xlims)
+    ax.set_ylim(*ylims)
     ax.set_yscale("log")
     ax.set_xscale("log")
 
@@ -23,10 +27,15 @@ def country_arrowplot(ax, country_df_2010, country_df_2021, region_map, regions,
         except IndexError:
             continue
 
-        x = row_2010["Production_kg"]/beef_cons_2010
-        y = row_2010["E_per_kg"]
-        x2 = row_2021["Production_kg"]/beef_cons_2010
-        y2 = row_2021["E_per_kg"]
+        if xvar == "Cons_share":
+            x = row_2010["Production_kg"]/cons_2010
+            x2 = row_2021["Production_kg"]/cons_2010
+        else:
+            x = row_2010[xvar]
+            x2 = row_2021[xvar]
+
+        y = row_2010[yvar]
+        y2 = row_2021[yvar]
         dx = x2 - x
         dy = y2 - y
         color = region_map.loc[region_map["alpha-3"]==country]["Color"].values[0]
@@ -52,14 +61,15 @@ def country_arrowplot(ax, country_df_2010, country_df_2021, region_map, regions,
         patch = mpatches.FancyArrow(x_axes,y_axes,dx_axes,dy_axes, width=0.001, ec=color, fc=color,
                                     linewidth=1, transform=ax.transAxes, length_includes_head=True,
                                     head_width=0.015, head_length=arrow_height)
-        ax.add_patch(patch)
 
         angle = math.atan2(dy_axes, dx_axes)*(180/np.pi)+90
         if angle > 90 and angle < 270:
             angle = angle - 180
 
         line[0].set_color("#00000000")
-        ax.text(*text_coords, s=row_2010["ISO"], fontsize=6, ha="center", va="center", color=color, rotation=angle)
+        if row_2010["bd_opp_total"] > country_df_2010["bd_opp_total"].max()*0.1:
+            ax.add_patch(patch)
+            ax.text(*text_coords, s=row_2010["ISO"], fontsize=6, ha="center", va="center", color=color, rotation=angle)
 
 
     ax.set_title("Change in Beef impact between 2010 and 2021")
