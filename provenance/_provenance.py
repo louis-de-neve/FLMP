@@ -37,7 +37,10 @@ def main(year, country_of_interest, sua, historic="", results_dir=Path("./result
         warnings.simplefilter("ignore")
         area_codes = pd.read_excel(f"{datPath}/nocsDataExport_20251021-164754.xlsx", engine="openpyxl")  
     item_codes = pd.read_csv(f"{datPath}/SUA_Crops_Livestock_E_ItemCodes.csv", encoding = "latin-1", low_memory=False)
-    country_code = area_codes[area_codes["ISO3"] == country_of_interest]["FAOSTAT"].values[0]
+    if country_of_interest != "WORLD":
+        country_code = area_codes[area_codes["ISO3"] == country_of_interest]["FAOSTAT"].values[0]
+    else:
+        country_code = "WORLD"
     weighing_factors = pd.read_csv(f"{datPath}/weighing_factors.csv", encoding = "latin-1")
 
     prov_mat_no_feed = pd.read_csv(trade_nofeed)
@@ -54,6 +57,22 @@ def main(year, country_of_interest, sua, historic="", results_dir=Path("./result
     alpha["Animal_Product"] = "Primary"
     gamma["Animal_Product"] = ""
 
+    if country_of_interest == "WORLD":
+        human_consumed = pd.concat([alpha, gamma], ignore_index=True)
+        feed = beta
+        feed = feed[feed.Value > 0.015]
+        human_consumed = human_consumed[human_consumed.Value > 0.015]
+
+        feed = add_cols(feed, area_codes, item_codes)
+        human_consumed = add_cols(human_consumed, area_codes, item_codes)
+        feed = feed.rename(columns={"Value": "provenance", "Error": "provenance_err"})
+        human_consumed = human_consumed.rename(columns={"Value": "provenance", "Error": "provenance_err"})
+        human_consumed["Animal_Product_Code"] = ""
+        country_savefile_path = results_dir / str(year) / country_of_interest
+        human_consumed.to_csv(f"{country_savefile_path}/human_consumed.csv")
+        feed.to_csv(f"{country_savefile_path}/feed.csv")
+    
+        return human_consumed, feed
 
     human_consumed = pd.concat([alpha, gamma], ignore_index=True)
     human_consumed = human_consumed[human_consumed.Consumer_Country_Code == country_code]

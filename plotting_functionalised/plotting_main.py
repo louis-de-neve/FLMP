@@ -129,4 +129,11 @@ def ellipse_setup():
     ellipse_plot(axs[0], df_2010, df_2021, region_map, regions, df_2010["Cons"].sum()*1000, (1e-7, 1), (1e-11, 1e-7), xvar="Cons_share", yvar="E_per_kg")
     plt.savefig('../outputs/ellipses.png', dpi=600)
 
-world_setup()
+
+
+df_2010, df_2021,_1,_2 = load_commodity("Sugar cane", True)
+print(df_2010)
+country_df_2010, country_df_2021 = calculate_impacts(_1, _2, df_2010, df_2021)
+print(country_df_2010[["ISO", "E"]][country_df_2010["ISO"]=="BRA"], country_df_2010["E"].sum())
+print(country_df_2021[["ISO", "E"]][country_df_2021["ISO"]=="BRA"], country_df_2021["E"].sum())
+# world_setup()

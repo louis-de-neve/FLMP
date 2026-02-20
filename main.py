@@ -30,6 +30,7 @@ from provenance._get_biodiversity_vals import fetch_biodiversity_vals_path
 from provenance._provenance import main as consumption_provenance_main
 from provenance._get_impacts_bd import get_impacts as get_impacts_main
 from provenance._process_dat import main as process_dat_main
+from provenance._process_dat import main_global as process_dat_main_global
 
 from pandas import read_excel, read_csv
 
@@ -51,11 +52,11 @@ N_PROCESSES = 8
 
 # Pipeline components to run
 # 0 = all, 1 = unzip, 2 = trade matrix, 3 = animal products to feed, 4 = country impacts
-PIPELINE_COMPONENTS: list = [0]
+PIPELINE_COMPONENTS: list = [4]
 
 cdat = read_excel("input_data/nocsDataExport_20251021-164754.xlsx")
 COUNTRIES = [_.upper() for _ in cdat["ISO3"].unique().tolist() if isinstance(_, str)]
-COUNTRIES = ["USA", "IND", "BRA", "JPN", "UGA", "GBR"]
+COUNTRIES = ["WORLD"]
 
 
 
@@ -74,7 +75,10 @@ def _process_country(country: str, year: int, hist: str):
             return []  # nothing to do for this country
         bf = get_impacts_main(feed, year, country, "feed_impacts_wErr.csv", results_dir=Path(RESULTS_DIR))
         bh = get_impacts_main(cons, year, country, "human_consumed_impacts_wErr.csv", results_dir=Path(RESULTS_DIR))
-        mi = process_dat_main(year, country, bh, bf, results_dir=Path(RESULTS_DIR))
+        if country == "WORLD":
+            mi = process_dat_main_global(year, "WORLD", bh, bf, results_dir=Path(RESULTS_DIR))
+        else:
+            mi = process_dat_main(year, country, bh, bf, results_dir=Path(RESULTS_DIR))
         missing_items_local.extend(mi)
         t1 = time.perf_counter()
         print(f"    [PID {os.getpid()}] Completed {country} in {t1 - t0:.2f} seconds")
@@ -187,11 +191,15 @@ def main(years=list(range(1986, 2022)),
                             continue
                         bf = get_impacts_main(feed, year, country, "feed_impacts_wErr.csv", results_dir=results_dir)
                         bh = get_impacts_main(cons, year, country, "human_consumed_impacts_wErr.csv", results_dir=results_dir)
-                        mi = process_dat_main(year, country, bh, bf, results_dir=results_dir)
+                        if country == "WORLD":
+                            mi = process_dat_main_global(year, "WORLD", bh, bf, results_dir=Path(RESULTS_DIR))
+                        else:
+                            mi = process_dat_main(year, country, bh, bf, results_dir=results_dir)
                         missing_items.extend(mi)
                         t1 = time.perf_counter()
                         print(f"         Completed in {t1 - t0:.2f} seconds")
                     except Exception as e:
+                        print(e)
                         print(f"Error processing {country}: {e}")
 
             else:
