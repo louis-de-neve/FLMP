@@ -31,6 +31,18 @@ def get_region_map():
     region_map = region_map.merge(regions, on="region", how="left")
     return regions, region_map
 
+
+def filter_top_commodities(groups, top_n=10):
+    c_impacts = []
+    for g in groups:
+        for c in g.commodities:
+            c_impacts.append(c.raw_vals[1])
+    c_impacts = sorted(c_impacts, reverse=True)
+    threshold = c_impacts[top_n-1]
+    for g in groups:
+        g.commodities = [c for c in g.commodities if c.raw_vals[1] >= threshold]
+    return groups
+
 def country_setup():
     c="CHN"
     fig, axs = get_axes(4)
@@ -43,7 +55,9 @@ def country_setup():
         df_2021[col] = df_2021[col] / 1.35e9
 
     groups = mosaic_plotting(axs[0,0], axs[0,1], df_2010, df_2021)
-    bar_plot(fig, axs[1,0], groups, (-1., 3.), relative=False)
+    groups = filter_top_commodities(groups, 10)
+    bar_plot(fig, axs[1,0], groups, (-0.2, 1.2), relative=True)
+    axs[1,0].set_title("Change in impact of top 10 commodities")
     cons_impact_plot(axs[1,1], groups)
     plt.suptitle(c)
     plt.savefig(f'../outputs/mosaics/{c}.png', dpi=600)
@@ -129,11 +143,51 @@ def ellipse_setup():
     ellipse_plot(axs[0], df_2010, df_2021, region_map, regions, df_2010["Cons"].sum()*1000, (1e-7, 1), (1e-11, 1e-7), xvar="Cons_share", yvar="E_per_kg")
     plt.savefig('../outputs/ellipses.png', dpi=600)
 
+def country_setup_2():
+    c="CHN"
+    fig, axs = get_axes(2)
+    # Data import
+    df_2010 = pd.read_csv(f'../results/{2010}/{c}/df_chn.csv')
+    df_2021 = pd.read_csv(f'../results/{2021}/{c}/df_chn.csv')
+    df_2010["Item"] = df_2010["Unnamed: 0"]
+    df_2021["Item"] = df_2021["Unnamed: 0"]
+
+    for col in ["bd_opp_total", "Cons", "bd_opp_total_err"]:
+        df_2010[col] = df_2010[col] / 1.43e9
+        df_2021[col] = df_2021[col] / 1.35e9
+
+    groups = mosaic_plotting(None, None, df_2010, df_2021)
+    groups = filter_top_commodities(groups, 10)
+    cons_impact_plot(axs[0], groups)
+
+    df_2010 = pd.read_csv(f'../results/{2010}/{c}/df_os.csv')
+    df_2021 = pd.read_csv(f'../results/{2021}/{c}/df_os.csv')
+    df_2010["Item"] = df_2010["Unnamed: 0"]
+    df_2021["Item"] = df_2021["Unnamed: 0"]
+
+    for col in ["bd_opp_total", "Cons", "bd_opp_total_err"]:
+        df_2010[col] = df_2010[col] / 1.43e9
+        df_2021[col] = df_2021[col] / 1.35e9
+
+    groups = mosaic_plotting(None, None, df_2010, df_2021)
+    groups = filter_top_commodities(groups, 10)
+    cons_impact_plot(axs[1], groups, (1e-2, 1e2))
+    
 
 
-df_2010, df_2021,_1,_2 = load_commodity("Sugar cane", True)
-print(df_2010)
-country_df_2010, country_df_2021 = calculate_impacts(_1, _2, df_2010, df_2021)
-print(country_df_2010[["ISO", "E"]][country_df_2010["ISO"]=="BRA"], country_df_2010["E"].sum())
-print(country_df_2021[["ISO", "E"]][country_df_2021["ISO"]=="BRA"], country_df_2021["E"].sum())
-# world_setup()
+
+    axs[0].set_title("Change in impact of domestic top 10 commodities")
+    axs[1].set_title("Change in impact of imported top 10 commodities")
+    # cons_impact_plot(axs[1], groups)
+    plt.suptitle(c)
+    plt.savefig(f'../outputs/mosaics/{c}3.png', dpi=600)
+
+country_setup_2()
+
+
+# df_2010, df_2021,_1,_2 = load_commodity("Sugar cane", True)
+# print(df_2010)
+# country_df_2010, country_df_2021 = calculate_impacts(_1, _2, df_2010, df_2021)
+# print(country_df_2010[["ISO", "E"]][country_df_2010["ISO"]=="BRA"], country_df_2010["E"].sum())
+# print(country_df_2021[["ISO", "E"]][country_df_2021["ISO"]=="BRA"], country_df_2021["E"].sum())
+# # world_setup()

@@ -1,21 +1,36 @@
 import matplotlib.patches as mpatches
 from matplotlib.legend_handler import HandlerTuple
 import numpy as np
-from mosaics import Group
+from mosaics import label_formatting, Group
 
 
+def tag_formatting(tag:str)->str:
+    if tag.startswith("Others_"):
+        label = tag.replace("Others_", "Other ")
+        if "pig meat" in label:
+            label = "Other meats"
+        if "Plantains" in label:
+            label = "Plantains"
+        if "carbohydrates" in label:
+            label = "Other Grains, roots, carbs"
+    else:
+        label = label_formatting(tag)
+    label = label.replace("carbohydrates", "carbs")
+    return label
 
-def cons_impact_plot(ax, groups:list[Group])->None:
+def cons_impact_plot(ax, groups:list[Group], xlim=(1e-1, 1e3))->None:
 
     def t1(z): return (ax.transData + ax.transAxes.inverted()).transform(z)
     ax.set_yscale("log")
     ax.set_xscale("log")
-    ax.set_xlim(1e-1, 1e3)
+    ax.set_xlim(*xlim)
     ax.set_ylim(1e-11, 1e-7)
     groups = sorted(groups, key=lambda g: g.n)
     labels = []
     handles = []
     for g in groups:
+        if len(g.commodities) == 0:
+            continue
         labels.append(g.name)
         handles.append(tuple([c.line_object for c in g.commodities]))
         for c in g.commodities:
@@ -37,7 +52,9 @@ def cons_impact_plot(ax, groups:list[Group])->None:
             patch = mpatches.FancyArrow(x_axes,y_axes,dx_axes,dy_axes, width=0.001, ec=c.color, fc=c.color,
                                         linewidth=1, transform=ax.transAxes, length_includes_head=True,
                                         head_width=0.01, head_length=arrow_height)
+            direction = 1 if dy_axes < 0 else -1
             ax.add_patch(patch)
+            ax.text(x_axes, y_axes+direction*0.015, label_formatting(c.name), fontsize=5, ha="center", va="center", zorder=4, transform=ax.transAxes)
 
 
 
