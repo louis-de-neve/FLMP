@@ -1,6 +1,7 @@
 .vscode/*
 .R(deprecated)/*
 processing/__pycache__/*
+plotting_functionalised/__pycache__/*
 processing/cotton_trade_matrix.py
 provenance/__pycache__/*
 __pycache__/*

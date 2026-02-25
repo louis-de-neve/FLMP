@@ -42,7 +42,7 @@ results_dir = "../results/"
 for year in os.listdir(results_dir):
     if year == "impacts":
         continue
-    for country in ["USA", "IND", "BRA", "JPN", "UGA", "GBR"]:
+    for country in ["GBR", "POL", "CHN", "IND", "RWA", "USA"]:
         if country == ".mrio" or country == "missing_items.txt":
             continue
         df = pd.read_csv(f"{results_dir}{year}/{country}/impacts_aggregated.csv", index_col=0)

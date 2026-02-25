@@ -43,7 +43,7 @@ results_dir = "../results/"
 for year in os.listdir(results_dir):
     if year == "impacts":
         continue
-    for country in ["USA", "IND", "BRA", "JPN", "UGA", "GBR"]:
+    for country in ["GBR", "POL", "CHN", "IND", "RWA", "USA"]:
 
         df1 = pd.read_csv(f"{results_dir}{year}/{country}/df_{country.lower()}.csv", index_col=0)
         df1 = df1[["Group", "bd_opp_total", "bd_opp_total_err"]]
@@ -81,7 +81,7 @@ master_df_imports = master_df_imports.merge(order, on="Group")
 master_df_imports = master_df_imports.sort_values(["Country", "Year", "Order"])
 master_df_imports = master_df_imports.drop(columns=["Order"])
 
-fig, axs = plt.subplots(nrows=3, ncols=2)
+fig, axs = plt.subplots(nrows=3, ncols=2, figsize=(10,10))
 axs = axs.flatten()
 
 
@@ -106,4 +106,5 @@ for i, country in enumerate(master_df_local["Country"].unique()):
 for ax in axs[:-2]:
     ax.set_xlabel("")
     ax.set_xticklabels([])
-plt.show()
+fig.tight_layout()
+plt.savefig(f"../outputs/Fig2_io.png", dpi=600)

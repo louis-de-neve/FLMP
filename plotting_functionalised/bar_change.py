@@ -18,7 +18,7 @@ def tag_formatting(tag:str)->str:
     label = label.replace("carbohydrates", "carbs")
     return label
 
-def bar_plot(fig,ax:Axes, groups:list[Group], ylim:tuple[float, float])->None:
+def bar_plot(fig,ax:Axes, groups:list[Group], ylim:tuple[float, float], relative=True)->None:
 
     left = 0
     pad = 0.008
@@ -38,7 +38,10 @@ def bar_plot(fig,ax:Axes, groups:list[Group], ylim:tuple[float, float])->None:
         for c in commodities:
             height = (c.raw_vals[1] - c.raw_vals[0])/c.raw_vals[0]
             err = np.sqrt((c.errors[1]/c.raw_vals[1])**2 + (c.errors[0]/c.raw_vals[0])**2) * abs(height)
-            rect = mpatches.Rectangle((left, 0), width, height, color=c.color, zorder=1)
+            if relative:
+                width = c.yvals[0]*g.xvals[0]
+                pad=0
+            rect = mpatches.Rectangle((left, 0), width, height, color=c.color, zorder=1, linewidth=0)
             ax.add_patch(rect)
             ax.errorbar(left + width/2, height, yerr=err, color="black", capsize=2, fmt="none", linewidth=0.8, zorder=3)
             left += width+pad

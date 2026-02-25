@@ -59,7 +59,7 @@ def cons_impact_plot(ax, groups:list[Group])->None:
             ax.plot(x, y, ls="dashed", color=total_grid_color, alpha=0.2, linewidth=0.8, zorder=1)
     ax.set_ylabel("Impact per kg")
     ax.set_xlabel("Annual consumption per capita, kg")
-    ax.set_title("Change in global commodity consumption and impact\nbetween 2010 and 2021")
+    ax.set_title("Change in commodity consumption and impact\nbetween 2010 and 2021")
 
     ax2 = ax.twiny()
     ax2.set_xscale('log')
