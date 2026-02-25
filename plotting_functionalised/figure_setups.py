@@ -45,7 +45,7 @@ def four_axes_setup():
     ax1 = fig.add_axes((xpad+left_margin, fheight + ypad, fwidth - 2*xpad, fheight - 2*ypad))
     ax2 = fig.add_axes((fwidth + xpad+left_margin/2, fheight + ypad, fwidth - 2*xpad, fheight - 2*ypad))
 
-    ax3 = fig.add_axes((xpad+left_margin, ypad + offset3 + shift34, fwidth - 2*xpad, fheight - 2*ypad - offset3))
+    ax3 = fig.add_axes((1.5*xpad+left_margin, ypad + shift34, fwidth - 2.5*xpad, fheight - 2*ypad))
     ax4 = fig.add_axes((fwidth + xpad+left_margin/2, ypad + shift34, fwidth - 2*xpad, fheight - 2*ypad - offset3/2))
 
     axs = np.array([[ax1, ax2], [ax3, ax4]])
@@ -88,7 +88,7 @@ def two_axes_setup():
     xpad = fpad * fwidth
     ypad = fpad * fheight
     left_margin = 0.03
-    bottom_margin = -0.02
+    bottom_margin = -0.0295
 
 
     ax1 = fig.add_axes((xpad+left_margin, ypad+bottom_margin, fwidth - 2*xpad, fheight - 2*ypad))

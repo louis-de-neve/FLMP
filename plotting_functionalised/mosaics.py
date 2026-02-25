@@ -95,8 +95,6 @@ ORDER = pd.DataFrame({'Grains, roots, starchy carbohydrates' : 3,
 
 
 def label_formatting(label):
-    if "Other" in label:
-        label = "Other"
     if ";" in label:
         label = label.split(";")[0]
     if "with the bone" in label:
@@ -107,6 +105,34 @@ def label_formatting(label):
         label = "Maize"
     if "Oil palm" in label:
         label = "Palm oil"
+    if "Meat of cattle" in label:
+        label = "Cattle\nMeat"
+    if "Meat of buffalo" in label:
+        label = "Buffalo\nMeat"
+    if "Meat of goat" in label:
+        label = "Goat\nMeat"
+    if "Meat of sheep" in label:
+        label = "Lamb\nMeat"
+    if "Meat of chicken" in label:
+        label = "Chicken"
+    if "Meat of pig" in label:
+        label = "Pork"
+    if "Others_Poul" in label:
+        label = "Other\nPoultry"
+    if "milk of cattle" in label:
+        label = "Cow\nMilk"
+    if "milk of buffalo" in label:
+        label = "Buffalo\nMilk"
+    if "eggs" in label:
+        label = "Eggs"
+    if "Others_Frui" in label:
+        label = "Other Fruit and Veg"
+    if "Others_Legum" in label:
+        label = "Other Beans"
+    if "Rape" in label:
+        label = "Rape"
+    if "Ground" in label:
+        label = "G'nuts"
     return label
 
 
@@ -255,13 +281,25 @@ def plot_mosaic(groups:list[Group], ax, i:int, i_larger:int, ratio:float)->None:
                     ax.add_patch(rect)
 
                     label = label_formatting(commodity.name)
-                    if (group.xvals[i] > 0.1) and (commodity.yvals[i] > 0.05) and (commodity.name != "Raw milk of cattle"):
-                        ax.text(left + group.xvals[i]/2, up + commodity.yvals[i]/2, label, ha="center", va="center", fontsize=6, color=text_color)
+                    if (group.xvals[i] > 0.1) and (commodity.yvals[i] > 0.05) and (commodity.name != "Raw milk of cattle") and (group.name != "Grains, roots, starchy carbohydrates"):
+                        ax.text(left + group.xvals[i]/2, up + commodity.yvals[i]/2, label, ha="center", va="center", fontsize=10, color=text_color)
                     elif (group.xvals[i] > 0.04) and (commodity.yvals[i] > 0.1):
-                        ax.text(left + group.xvals[i]/2, up + commodity.yvals[i]/2, label, ha="center", va="center", fontsize=6, rotation=90, color=text_color)
+                        ax.text(left + group.xvals[i]/2, up + commodity.yvals[i]/2, label, ha="center", va="center", fontsize=8, rotation=90, color=text_color)
 
                 up += commodity.yvals[i]
             left += group.xvals[i]
+        ratio = groups[0].commodities[0].raw_vals[0] / (groups[0].commodities[0].yvals[0]*groups[0].xvals[0])
+        reference = 10
+        ref_area = reference/ratio
+        ref_size = np.sqrt(ref_area)
+        if i == i_larger:
+            rect = mpatches.Rectangle((4*pad, 4*pad), ref_size, ref_size, color="#FFFFFF")
+            ax.add_patch(rect)
+            rect = mpatches.Rectangle((5*pad, 5*pad), ref_size-2*pad, ref_size-2*pad, color="#747474")
+            ax.add_patch(rect)
+            ax.text(4*pad+ref_size/2, 4*pad+ref_size/2, "Mean Species\nExtinction Risk\nover next\n100 years\nequal to 10", fontsize=6, ha="center", va="center")
+
+        print(ratio, ref_area, ref_size)
     
 
 

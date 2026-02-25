@@ -6,6 +6,7 @@ from matplotlib.legend_handler import HandlerPatch
 import numpy as np
 from mosaics import mosaic_plotting, label_formatting, Group, Commodity
 from bar_change import bar_plot
+from bar_change_io import bar_plot_io
 from cons_impact_scatter import cons_impact_plot
 from load_commodity import load_commodity, load_commodity_total
 from calculate_impacts import calculate_impacts
@@ -50,17 +51,30 @@ def country_setup():
     df_2010 = pd.read_csv(f'../results/{2010}/{c}/impacts_aggregated.csv')
     df_2021 = pd.read_csv(f'../results/{2021}/{c}/impacts_aggregated.csv')
 
-    for col in ["bd_opp_total", "Cons", "bd_opp_total_err"]:
-        df_2010[col] = df_2010[col] / 1.43e9
-        df_2021[col] = df_2021[col] / 1.35e9
 
     groups = mosaic_plotting(axs[0,0], axs[0,1], df_2010, df_2021)
     groups = filter_top_commodities(groups, 10)
-    bar_plot(fig, axs[1,0], groups, (-0.2, 1.2), relative=True)
+    bar_plot(fig, axs[1,0], groups, (-0.4, 1.2), relative=True)
     axs[1,0].set_title("Change in impact of top 10 commodities")
+
+    df_2010 = pd.read_csv(f'../results/{2010}/{c}/impacts_aggregated.csv')
+    df_2021 = pd.read_csv(f'../results/{2021}/{c}/impacts_aggregated.csv')
+    for col in ["bd_opp_total", "Cons", "bd_opp_total_err"]:
+        df_2010[col] = df_2010[col] / 1.43e9
+        df_2021[col] = df_2021[col] / 1.35e9
+    groups = mosaic_plotting(None, None, df_2010, df_2021)
+    groups = filter_top_commodities(groups, 10)
+
+    com_names = []
+    for g in groups:
+        for c2 in g.commodities:
+            com_names.append(c2.name)
+
     cons_impact_plot(axs[1,1], groups)
     plt.suptitle(c)
     plt.savefig(f'../outputs/mosaics/{c}.png', dpi=600)
+    print("here")
+    return com_names
 
 def world_setup():
 
@@ -145,6 +159,29 @@ def ellipse_setup():
 
 def country_setup_2():
     c="CHN"
+    fig, axs = get_axes(1)
+    # Data import
+    df_2010 = pd.read_csv(f'../results/{2010}/{c}/impacts_aggregated.csv')
+    df_2021 = pd.read_csv(f'../results/{2021}/{c}/impacts_aggregated.csv')
+
+    groups = mosaic_plotting(None, None, df_2010, df_2021)
+    groups = filter_top_commodities(groups, 10)
+    
+
+    df_2010 = pd.read_csv(f'../results/{2010}/{c}/df_os.csv')
+    df_2021 = pd.read_csv(f'../results/{2021}/{c}/df_os.csv')
+    df_2010["Item"] = df_2010["Unnamed: 0"]
+    df_2021["Item"] = df_2021["Unnamed: 0"]
+
+    groups2 = mosaic_plotting(None, None, df_2010, df_2021)
+    bar_plot_io(fig, axs[0], groups, (-0.4, 1.2), relative=True, ytick_spacing=0.2, secondary_groups=groups2)
+    
+
+    # cons_impact_plot(axs[1], groups)
+    plt.savefig(f'../outputs/mosaics/{c}2.png', dpi=600)
+
+def country_setup_3(c_names):
+    c="CHN"
     fig, axs = get_axes(2)
     # Data import
     df_2010 = pd.read_csv(f'../results/{2010}/{c}/df_chn.csv')
@@ -157,8 +194,9 @@ def country_setup_2():
         df_2021[col] = df_2021[col] / 1.35e9
 
     groups = mosaic_plotting(None, None, df_2010, df_2021)
-    groups = filter_top_commodities(groups, 10)
-    cons_impact_plot(axs[0], groups)
+    for g in groups:
+        g.commodities = [c for c in g.commodities if c.name in c_names]
+    cons_impact_plot(axs[0], groups, (1e-2, 1e3))
 
     df_2010 = pd.read_csv(f'../results/{2010}/{c}/df_os.csv')
     df_2021 = pd.read_csv(f'../results/{2021}/{c}/df_os.csv')
@@ -170,19 +208,22 @@ def country_setup_2():
         df_2021[col] = df_2021[col] / 1.35e9
 
     groups = mosaic_plotting(None, None, df_2010, df_2021)
-    groups = filter_top_commodities(groups, 10)
-    cons_impact_plot(axs[1], groups, (1e-2, 1e2))
+    for g in groups:
+        g.commodities = [c for c in g.commodities if c.name in c_names]
+    cons_impact_plot(axs[1], groups, (1e-2, 1e3))
     
 
 
-
-    axs[0].set_title("Change in impact of domestic top 10 commodities")
-    axs[1].set_title("Change in impact of imported top 10 commodities")
+    axs[1].legend([], frameon=False)
+    axs[0].set_title("Change in Domestic Impact of Top 10 Commodities")
+    axs[1].set_title("Change in Imported Impact of Top 10 Commodities")
     # cons_impact_plot(axs[1], groups)
-    plt.suptitle(c)
     plt.savefig(f'../outputs/mosaics/{c}3.png', dpi=600)
 
-country_setup_2()
+com_names = country_setup()
+
+# country_setup_2()
+# country_setup_3(com_names)
 
 
 # df_2010, df_2021,_1,_2 = load_commodity("Sugar cane", True)
