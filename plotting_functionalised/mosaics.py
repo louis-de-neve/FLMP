@@ -289,7 +289,7 @@ def plot_mosaic(groups:list[Group], ax, i:int, i_larger:int, ratio:float)->None:
                 up += commodity.yvals[i]
             left += group.xvals[i]
         ratio = groups[0].commodities[0].raw_vals[0] / (groups[0].commodities[0].yvals[0]*groups[0].xvals[0])
-        reference = 10
+        reference = 1e-4
         ref_area = reference/ratio
         ref_size = np.sqrt(ref_area)
         if i == i_larger:
@@ -297,8 +297,8 @@ def plot_mosaic(groups:list[Group], ax, i:int, i_larger:int, ratio:float)->None:
             ax.add_patch(rect)
             rect = mpatches.Rectangle((5*pad, 5*pad), ref_size-2*pad, ref_size-2*pad, color="#747474")
             ax.add_patch(rect)
-            ax.text(4*pad+ref_size/2, 4*pad+ref_size/2, "Mean Species\nExtinction Risk\nover next\n100 years\nequal to 10", fontsize=6, ha="center", va="center")
-
+            ax.annotate(f"Mean Species\nExtinction Risk\nover next\n100 years\nequal to 1x10{r'$^{-4}$'}", (5*pad, 3*pad+ref_size/2), (-6*pad-ref_size, 4*pad+ref_size/2), arrowprops=dict(arrowstyle="->", color="black", lw=1), fontsize=8.5, ha="center", va="bottom")
+            # ax.arrow(4*pad-ref_size/2, 4*pad+ref_size, ref_size, -2*pad, head_width=2*pad, head_length=2*pad, fc="#000000", ec="#000000")
         print(ratio, ref_area, ref_size)
     
 

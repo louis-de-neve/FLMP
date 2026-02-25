@@ -19,9 +19,9 @@ def tag_formatting(tag:str)->str:
     if label == "Other Fruit and vegetables":
         label = "Other Fruit\nand Vegetables"
     if label == "Soya beans":
-        label = "Soya Beans                  \n\n\n"
+        label = "Soya Beans                  \n\n"
     if label == "Chicken":
-        label = "\n\n\nChicken              "
+        label = "\n\nChicken              "
     if "Cow" in label:
         label = "Cow Milk"
     return label
@@ -66,11 +66,11 @@ def bar_plot(fig,ax:Axes, groups:list[Group], ylim:tuple[float, float], relative
         ax.add_patch(rect)
         ax.errorbar(left + c.width/2, c.height, yerr=c.err, color="black", capsize=2, fmt="none", linewidth=0.8, zorder=3)
         
-        va = "center" if "Chicken" in tag_formatting(c.name) else "bottom"
+        va = "center" if ("Chicken" in tag_formatting(c.name)) or ("Pork" in tag_formatting(c.name)) else "bottom"
         if c.height > 0:
-            ax.text(left+c.width/2, c.height+c.err+ylim[1]/50, tag_formatting(c.name), fontsize=6, ha="center", va=va, zorder=4)
+            ax.text(left+c.width/2, c.height+c.err+ylim[1]/50, tag_formatting(c.name), fontsize=8, ha="center", va=va, zorder=4)
         else:
-            ax.text(left+c.width/2, c.height-c.err-ylim[1]/50, tag_formatting(c.name), fontsize=6, ha="center", va="top", zorder=4)
+            ax.text(left+c.width/2, c.height-c.err-ylim[1]/50, tag_formatting(c.name), fontsize=8, ha="center", va="top", zorder=4)
         left += c.width+pad
 
         

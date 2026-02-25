@@ -24,7 +24,7 @@ def cons_impact_plot(ax, groups:list[Group], xlim=(1e-1, 1e3))->None:
     ax.set_yscale("log")
     ax.set_xscale("log")
     ax.set_xlim(*xlim)
-    ax.set_ylim(1e-11, 1e-7)
+    ax.set_ylim(1e-16, 1e-11)
     groups = sorted(groups, key=lambda g: g.n)
     labels = []
     handles = []
@@ -55,7 +55,7 @@ def cons_impact_plot(ax, groups:list[Group], xlim=(1e-1, 1e3))->None:
             direction = 1 if dy_axes < 0 else -1
             direction = direction*2 if c.name[:5]=="Other" else direction
             ax.add_patch(patch)
-            ax.text(x_axes, y_axes+direction*0.015, label_formatting(c.name).replace("\n", " ").replace(" and", "\nand"), fontsize=8, ha="center", va="center", zorder=4, transform=ax.transAxes)
+            ax.text(x_axes, y_axes+direction*0.025, label_formatting(c.name).replace("\n", " ").replace(" and", "\nand"), fontsize=10, ha="center", va="center", zorder=4, transform=ax.transAxes)
 
 
 
@@ -64,13 +64,13 @@ def cons_impact_plot(ax, groups:list[Group], xlim=(1e-1, 1e3))->None:
    
 
     total_grid_color = "#2F7FF8"
-    for i in range(-13, -4):
+    for i in range(-19, -4):
         i = 10 ** (i)
         x = np.logspace(-4, 3, 50)
         y = i/x
         ax.plot(x, y, color=total_grid_color, alpha=0.4, linewidth=0.8, zorder=1)
 
-    for j in range(-13, -4):
+    for j in range(-19, -4):
         for i in np.linspace(1*(10**j), 9*(10**j), 9):
             x = np.logspace(-4, 3, 50)
             y = i/x
@@ -84,7 +84,7 @@ def cons_impact_plot(ax, groups:list[Group], xlim=(1e-1, 1e3))->None:
     x1, x2 = ax.get_xlim()
     y1, y2 = ax.get_ylim()
     ax2.set_xlim(x1*y2, x2*y2)
-    ax2.set_xlabel("Impact of per capita consumption on\nMean Species Extinction Risk over next 100 years", color=total_grid_color)
+    ax2.set_xlabel("Per Capita Impact of consumption on\nMean Species Extinction Risk over next 100 years", color=total_grid_color)
     ax2.tick_params(axis='x', colors=total_grid_color)
 
     ax.legend(handles, labels,

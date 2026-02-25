@@ -50,7 +50,9 @@ def country_setup():
     # Data import
     df_2010 = pd.read_csv(f'../results/{2010}/{c}/impacts_aggregated.csv')
     df_2021 = pd.read_csv(f'../results/{2021}/{c}/impacts_aggregated.csv')
-
+    for col in ["bd_opp_total", "bd_opp_total_err"]:
+        df_2010[col] = df_2010[col] / 30995
+        df_2021[col] = df_2021[col] / 30995
 
     groups = mosaic_plotting(axs[0,0], axs[0,1], df_2010, df_2021)
     groups = filter_top_commodities(groups, 10)
@@ -62,6 +64,9 @@ def country_setup():
     for col in ["bd_opp_total", "Cons", "bd_opp_total_err"]:
         df_2010[col] = df_2010[col] / 1.43e9
         df_2021[col] = df_2021[col] / 1.35e9
+    for col in ["bd_opp_total", "bd_opp_total_err"]:
+        df_2010[col] = df_2010[col] / 30995
+        df_2021[col] = df_2021[col] / 30995
     groups = mosaic_plotting(None, None, df_2010, df_2021)
     groups = filter_top_commodities(groups, 10)
 
@@ -71,7 +76,7 @@ def country_setup():
             com_names.append(c2.name)
 
     cons_impact_plot(axs[1,1], groups)
-    plt.suptitle(c)
+    # plt.suptitle(c)
     plt.savefig(f'../outputs/mosaics/{c}.png', dpi=600)
     print("here")
     return com_names
@@ -192,6 +197,9 @@ def country_setup_3(c_names):
     for col in ["bd_opp_total", "Cons", "bd_opp_total_err"]:
         df_2010[col] = df_2010[col] / 1.43e9
         df_2021[col] = df_2021[col] / 1.35e9
+    for col in ["bd_opp_total", "bd_opp_total_err"]:
+        df_2010[col] = df_2010[col] / 30995
+        df_2021[col] = df_2021[col] / 30995
 
     groups = mosaic_plotting(None, None, df_2010, df_2021)
     for g in groups:
@@ -206,10 +214,13 @@ def country_setup_3(c_names):
     for col in ["bd_opp_total", "Cons", "bd_opp_total_err"]:
         df_2010[col] = df_2010[col] / 1.43e9
         df_2021[col] = df_2021[col] / 1.35e9
+    for col in ["bd_opp_total", "bd_opp_total_err"]:
+        df_2010[col] = df_2010[col] / 30995
+        df_2021[col] = df_2021[col] / 30995
 
     groups = mosaic_plotting(None, None, df_2010, df_2021)
     for g in groups:
-        g.commodities = [c for c in g.commodities if c.name in c_names]
+        g.commodities = [c2 for c2 in g.commodities if c2.name in c_names]
     cons_impact_plot(axs[1], groups, (1e-2, 1e3))
     
 
@@ -222,8 +233,8 @@ def country_setup_3(c_names):
 
 com_names = country_setup()
 
-# country_setup_2()
-# country_setup_3(com_names)
+country_setup_2()
+country_setup_3(com_names)
 
 
 # df_2010, df_2021,_1,_2 = load_commodity("Sugar cane", True)
