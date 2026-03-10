@@ -337,12 +337,18 @@ def animal_products_to_feed(prefer_import="import", conversion_opt="dry_matter",
 
     # Pasture area calculation
     areas = pd.read_csv("input_data/Inputs_LandUse_E_All_Data.csv", encoding="Latin-1")
-    areas = areas[(areas["Item Code"]==6655)&(areas["Element Code"]==5110)][["Area Code", f"Y{year}"]]
-    areas[f"Y{year}"] *= 1e7  # convert from 1000 ha to m2
-    areas = areas.rename(columns={f"Y{year}":"Total_Pasture_Area_m2", "Area Code":"Country_Code"})
+    perm_areas = areas[(areas["Item Code"]==6655)&(areas["Element Code"]==5110)][["Area Code", f"Y{year}"]].copy()
+    temp_areas = areas[(areas["Item Code"]==6633)&(areas["Element Code"]==5110)][["Area Code", f"Y{year}"]].copy()
+    perm_areas[f"Y{year}"] *= 1e7  # convert from 1000 ha to m2
+    temp_areas[f"Y{year}"] *= 1e7  # convert from 1000 ha to m2
+    perm_areas = perm_areas.rename(columns={f"Y{year}":"Perm_Pasture_Area_m2", "Area Code":"Country_Code"})
+    temp_areas = temp_areas.rename(columns={f"Y{year}":"Temp_Pasture_Area_m2", "Area Code":"Country_Code"})
 
-    productions = productions.merge(areas, on="Country_Code", how="left")
-    productions["Total_Pasture_Area_m2"] = productions["Total_Pasture_Area_m2"].fillna(0)
+    productions = productions.merge(perm_areas, on="Country_Code", how="left")
+    productions = productions.merge(temp_areas, on="Country_Code", how="left")
+    productions["Perm_Pasture_Area_m2"] = productions["Perm_Pasture_Area_m2"].fillna(0)
+    productions["Temp_Pasture_Area_m2"] = productions["Temp_Pasture_Area_m2"].fillna(0)
+    productions["Total_Pasture_Area_m2"] = productions["Perm_Pasture_Area_m2"] + productions["Temp_Pasture_Area_m2"]
     productions["Pasture_Area_m2"] = productions["Total_Pasture_Area_m2"] * productions["Area_Share"]
     productions = productions[["Item_Code", "Country_Code", "Pasture_Area_m2", "Pasture_Percent_Error", "Value", "Area_Share"]]
     productions["Pasture_Efficiency_m2_per_kg"] = productions["Pasture_Area_m2"] / productions["Value"]
@@ -366,4 +372,5 @@ def animal_products_to_feed(prefer_import="import", conversion_opt="dry_matter",
 if __name__ == "__main__":
     import os
     os.chdir("../")
-    animal_products_to_feed("import", "dry_matter", 2019, "")
+    for year1 in range(2010, 2021):
+        animal_products_to_feed("import", "dry_matter", year1, "")
