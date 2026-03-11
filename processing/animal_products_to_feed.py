@@ -352,6 +352,7 @@ def animal_products_to_feed(prefer_import="import", conversion_opt="dry_matter",
     productions["Pasture_Area_m2"] = productions["Total_Pasture_Area_m2"] * productions["Area_Share"]
     productions = productions[["Item_Code", "Country_Code", "Pasture_Area_m2", "Pasture_Percent_Error", "Value", "Area_Share"]]
     productions["Pasture_Efficiency_m2_per_kg"] = productions["Pasture_Area_m2"] / productions["Value"]
+    productions["Pasture_Yield_kg_per_m2"] = productions["Value"] / productions["Pasture_Area_m2"]
 
     import warnings
     with warnings.catch_warnings():
@@ -359,8 +360,14 @@ def animal_products_to_feed(prefer_import="import", conversion_opt="dry_matter",
         area_codes = pd.read_excel(f"input_data/nocsDataExport_20251021-164754.xlsx", engine="openpyxl")  
         area_codes = area_codes[["ISO3", "FAOSTAT"]].rename(columns={"ISO3":"Country_ISO", "FAOSTAT":"Country_Code"})
     productions = productions.merge(area_codes, on="Country_Code", how="left")
-    productions = productions.rename(columns={"Pasture_Efficiency_m2_per_kg": "fp_m2_kg", "Pasture_Percent_Error": "fp_m2_kg_perc", "Area_Share": "g_rat"})
-    productions = productions[["Item_Code", "Country_ISO", "fp_m2_kg", "fp_m2_kg_perc", "g_rat"]]
+    productions = productions.rename(columns={
+        "Pasture_Efficiency_m2_per_kg": "fp_m2_kg",
+        "Pasture_Yield_kg_per_m2": "fp_kg_m2",
+        "Pasture_Percent_Error": "fp_m2_kg_perc",
+        "Pasture_Area_m2": "fp_m2",
+        "Value": "fp_kg",
+        "Area_Share": "g_rat"})
+    productions = productions[["Item_Code", "Country_ISO", "fp_m2_kg", "fp_kg_m2", "fp_m2", "fp_kg"]]
 
     output_filepath = results_dir / str(year) / ".mrio" / f"Pasture_calc.csv"
     productions.to_csv(output_filepath, index=False, encoding="Latin-1")
