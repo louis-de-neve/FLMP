@@ -7,6 +7,10 @@ provenance/__pycache__/*
 __pycache__/*
 results/*
 outputs/*
+feed_use/*
+pasture_yields/*
+*.zip
+
 temp.txt
 temp.py
 input_data/deprecated/*
