@@ -103,6 +103,7 @@ def weighted_quantile(values, quantiles, sample_weight=None,
 for country_iso in os.listdir(f"{results_dir}/{year}"):
     if len(country_iso) != 3 or not os.path.exists(f"{results_dir}/{year}/{country_iso}/df_{country_iso.lower()}.csv"):
         continue
+    print(country_iso)
     country_df = pd.read_csv(f"{results_dir}/{year}/{country_iso}/impacts_full.csv")[["Consumer_Country_Code", "Producer_Country_Code", "Animal_Product_Code", "ItemT_Code", "bd_opp_cost_calc", "provenance"]]
     
     country_df["Effective_Producer_Code"] = country_df["Consumer_Country_Code"]
@@ -175,6 +176,6 @@ ax.set_xlim(-0.6, len(group_df)-0.4)
 ax.set_ylim(1e-13, 1e-7)
 ax.set_yscale("log")
 ax.set_ylabel("Extinction opportunity cost distribution \n ($\Delta$E per kilogram)")
-plt.savefig(f"../outputs/Fig1_recreation{year}.png", dpi=600, bbox_inches='tight')
+plt.savefig(f"../outputs/Fig1_recreation_{year}.png", dpi=600, bbox_inches='tight')
 
     
