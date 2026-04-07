@@ -121,7 +121,10 @@ def get_impacts(wdf, year, coi, filename, results_dir=Path("./results")):
 
 
     # error propogation
-    wdf["err"] = (wdf.provenance_err / wdf.provenance)
+    if filename[:4] != "feed":
+        wdf["err"] = (np.sqrt((wdf.provenance_err / wdf.provenance)**2+(wdf.fp_m2_kg_perc**2)))
+    else:
+        wdf["err"] = wdf.provenance_err / wdf.provenance
     wdf["FAO_land_calc_m2_err"] = wdf["FAO_land_calc_m2"] * wdf["err"]
     wdf["SWWU_avg_calc_err"] = wdf["SWWU_avg_calc"] * wdf["err"]
     wdf["GHG_avg_calc_err"] = wdf["GHG_avg_calc"] * wdf["err"]
