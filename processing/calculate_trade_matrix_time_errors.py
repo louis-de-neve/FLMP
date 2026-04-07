@@ -301,8 +301,26 @@ def calculate_trade_matrix(
         p = p_mean
 
         truth = calculate_mrio_matrices(Z, p)
+        @jit(nopython=True)
+        def calculate_naive_matrix(Z, p):
+            summation_vector = np.ones(len(p))
+            x = p + Z @ summation_vector
+            e = summation_vector @ Z
+            one_over_x = np.where(x != 0, 1.0/x, 0.0)
+            g = (x-e) * one_over_x
+            G = np.diag(g)
+            attributable_prod_and_import = Z + np.diag(p)
+            R_error = G @ attributable_prod_and_import
+            return R_error
+        naive = calculate_naive_matrix(Z, p)
+        R_stdev = np.abs(naive - truth)
+        R_s = R_stdev[~np.isnan(R_stdev)]
+        R_m = truth[~np.isnan(truth)]
+        R_s = R_s[R_m!=0]
+        R_m = R_m[R_m!=0]
+        error = np.average(R_s/R_m, weights=R_m) + 1
 
-        R_std = monte_carlo(Z, p, std, p_std)
+        R_std = monte_carlo(Z, p, std, p_std, error)
         R_err = R_std/truth
         Rmax = np.max(truth)
         R_err[np.isnan(R_err)] = 0
@@ -324,20 +342,21 @@ def calculate_trade_matrix(
         plt.show()
 
 
-def monte_carlo(Z, p, Z_std, p_std, iterations=1000):
+def monte_carlo(Z, p, Z_std, p_std, e, iterations=1000):
     """Monte Carlo simulation to estimate uncertainty in R_bar"""
     results = []
     np.random.seed(0)
+    t = 5
     for _ in range(iterations):
-        Z_noise = np.random.normal(0, Z_std) # err% noise
-        Z_noise[Z_noise<-2*Z_std] = -2*Z_std[Z_noise<-2*Z_std] # limit on pertubation
-        Z_noise[Z_noise>2*Z_std] = 2*Z_std[Z_noise>2*Z_std] # limit on pertubation
+        Z_noise = np.random.normal(0, Z_std)*e # err% noise
+        Z_noise[Z_noise<-t*Z_std] = -t*Z_std[Z_noise<-t*Z_std] # limit on pertubation
+        Z_noise[Z_noise>t*Z_std] = t*Z_std[Z_noise>t*Z_std] # limit on pertubation
         Z_perturbed = Z+Z_noise
         Z_perturbed[Z_perturbed<0] = 0
 
-        p_noise = np.random.normal(0, p_std) 
-        p_noise[p_noise<-2*p_std] = -2*p_std[p_noise<-2*p_std] # limit on pertubation
-        p_noise[p_noise>2*p_std] = 2*p_std[p_noise>2*p_std] # limit on pertubation
+        p_noise = np.random.normal(0, p_std)*e
+        p_noise[p_noise<-t*p_std] = -t*p_std[p_noise<-t*p_std] # limit on pertubation
+        p_noise[p_noise>t*p_std] = t*p_std[p_noise>t*p_std] # limit on pertubation
         p_perturbed = p+p_noise# err% noise
         p_perturbed[p_perturbed<0] = 0
 
@@ -347,11 +366,11 @@ def monte_carlo(Z, p, Z_std, p_std, iterations=1000):
     results = np.array(results)
     R_mean = np.mean(results, axis=0)
     R_stdev = np.std(results, axis=0)
-    # R_s = R_stdev[~np.isnan(R_stdev)]
-    # R_m = R_mean[~np.isnan(R_stdev)]
-    # R_s = R_s[R_m!=0]
-    # R_m = R_m[R_m!=0]
-    # print(np.average(R_s/R_m, weights=R_m))
+    R_s = R_stdev[~np.isnan(R_stdev)]
+    R_m = R_mean[~np.isnan(R_stdev)]
+    R_s = R_s[R_m!=0]
+    R_m = R_m[R_m!=0]
+    print(np.average(R_s/R_m, weights=R_m))
     return R_stdev
         
 

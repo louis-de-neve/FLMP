@@ -52,7 +52,7 @@ N_PROCESSES = 8
 
 # Pipeline components to run
 # 0 = all, 1 = unzip, 2 = trade matrix, 3 = animal products to feed, 4 = country impacts
-PIPELINE_COMPONENTS: list = [4]
+PIPELINE_COMPONENTS: list = [3,4]
 
 cdat = read_excel("input_data/nocsDataExport_20251021-164754.xlsx")
 COUNTRIES = [_.upper() for _ in cdat["ISO3"].unique().tolist() if isinstance(_, str)]

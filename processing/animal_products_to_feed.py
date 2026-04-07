@@ -367,7 +367,7 @@ def animal_products_to_feed(prefer_import="import", conversion_opt="dry_matter",
         "Pasture_Area_m2": "fp_m2",
         "Value": "fp_kg",
         "Area_Share": "g_rat"})
-    productions = productions[["Item_Code", "Country_ISO", "fp_m2_kg", "fp_kg_m2", "fp_m2", "fp_kg"]]
+    productions = productions[["Item_Code", "Country_ISO", "fp_m2_kg", "fp_kg_m2", "fp_m2", "fp_kg", "fp_m2_kg_perc"]]
 
     output_filepath = results_dir / str(year) / ".mrio" / f"Pasture_calc.csv"
     productions.to_csv(output_filepath, index=False, encoding="Latin-1")
