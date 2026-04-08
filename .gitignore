@@ -10,7 +10,7 @@ outputs/*
 feed_use/*
 pasture_yields/*
 *.zip
-
+*.pkl
 temp.txt
 temp.py
 input_data/deprecated/*
