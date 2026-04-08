@@ -298,12 +298,9 @@ def calculate_trade_matrix(
     sugar_production["Value_new"] = sugar_production["Value"] * sugar_production["Conversion_factor"]
 
     # Calculate shares for later use
-    sugar_shares = (sugar_production
-        .groupby(["Area_Code", "Year"],)
-        .apply(lambda x: x.assign(share=x["Value"] / x["Value"].sum()))
-        .reset_index(drop=True)
-        [["Area_Code", "Year", "Item_Code", "share"]]
-        .query("share > 0"))
+
+    sugar_shares = sugar_production.groupby(["Area_Code"]).apply(lambda x: x.assign(share=x["Value"] / x["Value"].sum()))
+    sugar_shares = sugar_shares.reset_index()[["Area_Code", "Year", "Item_Code", "share"]].query("share > 0")
 
     # Add production data - group by key columns and aggregate
     sugar_production = (sugar_production
@@ -376,23 +373,19 @@ def calculate_trade_matrix(
     
     sugar_processing["Value_new"] = sugar_processing["Value"] * sugar_processing["Conversion_factor"]
 
-
-    sugar_processing = (sugar_processing
-        .groupby(["Area_Code", "Year"])
-        .apply(lambda x: x.assign(processing_share=x["Value_new"] / x["Value_new"].sum()))
-        .reset_index(drop=True)[["Area_Code", "Year", "Item_Code", "processing_share"]])
+    sugar_processing = sugar_processing.groupby(["Area_Code", "Year"]).apply(lambda x: x.assign(processing_share=x["Value_new"] / x["Value_new"].sum()))
+    sugar_processing = sugar_processing.reset_index()[["Area_Code", "Year", "Item_Code", "processing_share"]]
 
     # Join sugar shares with processing data
     sugar_crop_share = sugar_shares.merge(sugar_processing, 
         on=["Area_Code", "Year", "Item_Code"], 
         how="left")
 
-    # Check if a crop does not appear in processing data but does in production
-    sugar_crop_share = (sugar_crop_share
-        .groupby(["Area_Code", "Year"])
-        .apply(lambda x: x.assign(control=x["processing_share"].sum(skipna=True)))
-        .reset_index(drop=True))
 
+    # Check if a crop does not appear in processing data but does in production
+    sugar_crop_share = sugar_crop_share.groupby(["Area_Code", "Year"]).apply(lambda x: x.assign(control=x["processing_share"].sum(skipna=True)))    
+    sugar_crop_share = sugar_crop_share.reset_index()
+    
     # If that is the case, set the contribution to processing to zero
     mask1 = (sugar_crop_share["processing_share"].isna() & 
             (sugar_crop_share["control"] == 1))
@@ -411,7 +404,7 @@ def calculate_trade_matrix(
         left_on="Sugar_Crop_Code",
         right_on="FAO_code",
         how="left")
-
+    
     sugar_data = sugar_trade_data.merge(
         sugar_crop_share,
         left_on=["Year", "Item_Code", "Producer_Country_Code"],
@@ -426,10 +419,8 @@ def calculate_trade_matrix(
         production_all["Item_Code"].isin(sugar_crop_codes)
         ].rename(columns={"Value": "national_production"})
     
-    sugar_data = (sugar_data
-        .groupby(["Producer_Country_Code", "Year", "Item_Code"])
-        .apply(lambda x: x.assign(sugar_crop_total=x["Value"].sum(skipna=True)))
-        .reset_index(drop=True))
+    sugar_data = sugar_data.groupby(["Producer_Country_Code", "Year", "Item_Code"]).apply(lambda x: x.assign(sugar_crop_total=x["Value"].sum(skipna=True)))
+    sugar_data = sugar_data.reset_index()
 
     sugar_data = sugar_data.merge(
         sugar_production_2,
