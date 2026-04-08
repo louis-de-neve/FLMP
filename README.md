@@ -197,7 +197,7 @@ For each processed year, the pipeline generates:
 
 ---
 > [!NOTE]
-> Processing time: ~20 minutes for all years (1986-2013) on a machine with 32GB RAM
+> Processing time: ~2 hrs for all years (1986-2013) on a machine with 32GB RAM
 > Recommended minimum 32GB RAM
 
 ---
