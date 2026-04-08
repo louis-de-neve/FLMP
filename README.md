@@ -166,10 +166,11 @@ For each processed year, the pipeline generates:
    - `food_commodity_impacts.csv` has been added with calculated per kg impacts
 
 ---
-> [!NOTE] Performance
+> [!NOTE]
+> Performance
 > Processing time: ~20 minutes for all years (1986-2013) on a machine with 32GB RAM
 > Recommended minimum 32GB RAM
 
 ---
-> [!NOTE] Reliability
+> [!NOTE]  Reliability
 > In theory this code should run cleanly for 1986 - 2022, however commodity crosswalks are missing for the 2000 MAPSPAM commodities and FAO data mapping is unreliable prior to 2010. We therefore cannot guarantee the accuracy of results prior to 2010. 
