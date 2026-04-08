@@ -37,8 +37,9 @@ from pandas import read_excel, read_csv
 
 # CONFIG
 RESULTS_DIR = "./results"
-
 YEARS = list(range(2010, 2022))
+ERROR_ITERATIONS = 1000
+
 
 # Select a conversion method
 CONVERSION_OPTION = "dry_matter"
@@ -49,8 +50,8 @@ PREFER_IMPORT = "import"
 # select working directory
 WORKING_DIR = '.'
 
+# Multiprocessing settings
 N_PROCESSES = 8
-ERROR_ITERATIONS = 1000
 
 # Pipeline components to run
 # 0 = all, 1 = unzip, error matrix, 3 = trade matrix, 4 = animal products to feed, 5 = country impacts
@@ -58,8 +59,6 @@ PIPELINE_COMPONENTS: list = [0]
 
 cdat = read_excel("input_data/nocsDataExport_20251021-164754.xlsx")
 COUNTRIES = [_.upper() for _ in cdat["ISO3"].unique().tolist() if isinstance(_, str)]
-COUNTRIES = ["GBR"]
-
 
 
 def _process_country(country: str, year: int, hist: str):
