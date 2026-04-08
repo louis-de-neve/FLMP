@@ -12,12 +12,3 @@ openpyxl>=3.0.0
 xlrd>=2.0.2
 # Progress bars
 tqdm>=4.64.0
-
-# Path handling (built-in, but explicit for clarity)
-pathlib2>=2.3.0; python_version<"3.4"
-
-# Standard library modules used (no installation needed):
-# os
-# zipfile
-# warnings
-# pathlib

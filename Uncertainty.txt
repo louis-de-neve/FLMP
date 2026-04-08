@@ -1,0 +1,44 @@
+﻿There are three core sources of uncertainty in the model, and these sources are combined in quadrature to provide the final value of uncertainty.
+
+
+The main source of uncertainty comes from the input data. Primarily this comes from the MAPSPAM data, specifically the 2020 SPAM production/area layers, where the cropland distribution does not match observed patterns [1]. This uncertainty has not been quantified as we do not know the source or form but is likely the most significant. Additionally, within the LIFE layer, uncertainty is calculated as the area weighted standard deviation of all the pixels. The uncertainties are also added in quadrature in a year where MAPSPAM data is not available, as we interpolate between two different values.
+
+
+The second core source of uncertainty is the MRIO model used to determine commodity sourcing [2]. While MRIO models do have intrinsic uncertainties (attribution and aggregate uncertainty as well as spatio-temporal variability) attributed to their commodity distribution [3, 4], they can also be used to propagate the uncertainty in the input data through the model. Unfortunately, the FAO does not provide any uncertainty data, so an alternative approach was required to determine the sensitivity of the final result to changes in input data.
+
+
+Firstly, the difference between the full MRIO result and the first order term of the MRIO expansion was determined [2, eq.6], and the weighted average difference was found. This represented the difference between taking the trade data at face value, versus considering second and higher order trades. For most commodities this value was around 2-4%. This value, σaa, was determined to be the MRIO attribution and aggregation variability. For both the production vector and trade matrix of each commodity, the element wise standard deviation of inputs from 2010-2020 (excluding outliers greater than 1.5x the interquartile range, to prevent data points where few entries were present from affecting final results) was calculated as the uncertainty in input data, σi. 
+
+
+Subsequently, a Monte-Carlo simulation was used. The median values of the matrices between 2010 and 2020 were used as the base data, , and a Gaussian normal function was used as the noise. 
+b ~ ℕ(0,σi)(1+σaa) 
+
+ 
+The noise was capped between - and 5 to give , keeping trade values positive and stopping runaway errors that appears in some runs when the 5 limit was not in place. 
+The summed total  was passed through the MRIO calculation 10,000 times. The element-wise standard deviation divided by mean of these results was taken as the element’s error attributable to both the FAO input data and the MRIO model. 
+
+
+For example, for wheat, the weighted mean difference between first order and full model results is 4.7%, while the Monte-Carlo derived mean error (which includes input uncertainty) was 24%. It is worth noting that for domestic consumption and commodities with significant trade changes this error is likely to be an overestimate - changing weather and economic conditions result in changes in production that, while it may be well reported, adds a layer of false “uncertainty”  unrelated to data quality. 
+
+
+This error is also propagated through feed distribution, so the impact of ruminants will contain feed and animal product uncertainty added in quadrature.
+
+
+Pasture yields are the final significant source of uncertainty. This is calculated yearly based on the reported FAO land usage and the share of total pasture attributable to that commodity, as per the MRIO model. The percentage uncertainty in the yield is determined by the percentage uncertainty in this pasture share. For pasture yields that are missing, the global median is used. For crops that do not have reported yields, the results are backfilled using the globally reported yields, as per FAO.
+
+
+
+
+Notes:
+It is worth noting uncertainty should probably be lower when considering global values as that is not consumer based and therefore sourcing is irrelevant (this could be achieved by setting the MRIO uncertainty to zero)
+
+[1] https://docs.google.com/document/d/13yj9viWVsEMZQ4CyOQQOaVQ7MpO0RmTh7Tpll2D8DQg/edit?usp=sharing
+
+[2]
+https://doi.org/10.1016/j.ecolecon.2011.01.012 
+
+[3]
+https://www.sciencedirect.com/science/article/pii/S0921800909003577#bib110
+
+[4]
+https://doi.org/10.1021/es0629110 
