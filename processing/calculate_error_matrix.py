@@ -224,23 +224,25 @@ def load_data(conversion_opt="dry_matter",
 def calculate_error_matrix(
         conversion_opt="dry_matter",
         prefer_import="import",
-        historic=""):
+        historic="",
+        iterations=1000):
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        e = calculate_err_matrix(conversion_opt, prefer_import, historic)
+        e = calculate_err_matrix(conversion_opt, prefer_import, historic, iterations)
         return e
 
 def calculate_err_matrix(
         conversion_opt="dry_matter",
         prefer_import="import",
-        historic=""):
+        historic="",
+        iterations=1000):
     """Calculate Trade Matrix module for MRIO pipeline"""
 
     primary_data, production_all = load_data(conversion_opt, prefer_import, historic)
     unique_combinations = primary_data[["Year", "primary_item"]].drop_duplicates()
     monte_carlo_results = {}
 
-    for ic in tqdm(unique_combinations["primary_item"].unique(), desc="    Calculating error matrix for each primary item"):
+    for ic in tqdm(unique_combinations["primary_item"].unique(), desc="    Calculating error matrix for each primary item", position=0, leave=True):
         p_data = primary_data[primary_data["primary_item"] == ic]
         prod_data = production_all[production_all["Item_Code"] == ic]
         producers = prod_data["Area_Code"].unique()
@@ -270,20 +272,20 @@ def calculate_err_matrix(
         Ps = np.where(Ps>p_q3+1.5*p_iqr, 0, Ps) # remove outliers
 
         std = np.nanstd(np.where(np.isclose(Zs,0), np.nan, Zs), axis=0)
-        mean = np.nanmean(np.where(np.isclose(Zs,0), np.nan, Zs), axis=0)
+        median = np.nanmedian(np.where(np.isclose(Zs,0), np.nan, Zs), axis=0)
         p_std = np.nanstd(np.where(np.isclose(Ps,0), np.nan, Ps), axis=0)
-        p_mean = np.nanmean(np.where(np.isclose(Ps,0), np.nan, Ps), axis=0)
+        p_median = np.nanmedian(np.where(np.isclose(Ps,0), np.nan, Ps), axis=0)
 
-        mean[np.isnan(mean)] = 0
-        p_mean[np.isnan(p_mean)] = 0
+        median[np.isnan(median)] = 0
+        p_median[np.isnan(p_median)] = 0
 
         std[np.isnan(std)] = 0
         std[std<0] = 0
         p_std[np.isnan(p_std)] = 0
         p_std[p_std<0] = 0
 
-        Z = mean
-        p = p_mean
+        Z = median
+        p = p_median
 
         truth = calculate_mrio_matrices(Z, p)
         naive = calculate_naive_matrix(Z, p)
@@ -298,15 +300,12 @@ def calculate_err_matrix(
         else:
             error = np.average(R_s/R_m, weights=R_m) + 1
         # print(ic)
-        R_std = monte_carlo(Z, p, std, p_std, error)
+        R_std = monte_carlo(Z, p, std, p_std, error, iterations)
         output = {"primary_item": ic, "R_std": R_std, "countries": countries, "country_dict": country_dict, "R_bar": truth}
         monte_carlo_results[ic] = output
 
-    # print(monte_carlo_results)
-    return monte_carlo_results
-
-
         # Rmax = np.max(truth)
+        # R_err = R_std/truth
         # R_err[np.isnan(R_err)] = 0
         # R_err = np.abs(R_err)
         # thresh = 100
@@ -324,6 +323,10 @@ def calculate_err_matrix(
         # cbar1 = plt.colorbar(axs[1].images[0], ax=axs[1])
         # cbar1.set_label("Relative Error")
         # plt.show()
+    # print(monte_carlo_results)
+    return monte_carlo_results
+
+
 
 
 def monte_carlo(Z, p, Z_std, p_std, e, iterations=1000):
@@ -354,6 +357,7 @@ def monte_carlo(Z, p, Z_std, p_std, e, iterations=1000):
     R_m = R_mean[~np.isnan(R_stdev)]
     R_s = R_s[R_m!=0]
     R_m = R_m[R_m!=0]
+    print(f"Average relative error in R_bar: {np.average(R_s/R_m, weights=R_m)}")
     return R_stdev
         
 

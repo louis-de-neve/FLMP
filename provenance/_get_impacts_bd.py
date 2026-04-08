@@ -122,6 +122,7 @@ def get_impacts(wdf, year, coi, filename, results_dir=Path("./results")):
 
     # error propogation
     if filename[:4] != "feed":
+        wdf.fp_m2_kg_perc = wdf.fp_m2_kg_perc.fillna(0)
         wdf["err"] = (np.sqrt((wdf.provenance_err / wdf.provenance)**2+(wdf.fp_m2_kg_perc**2)))
     else:
         wdf["err"] = wdf.provenance_err / wdf.provenance

@@ -50,10 +50,11 @@ PREFER_IMPORT = "import"
 WORKING_DIR = '.'
 
 N_PROCESSES = 8
+ERROR_ITERATIONS = 1000
 
 # Pipeline components to run
 # 0 = all, 1 = unzip, error matrix, 3 = trade matrix, 4 = animal products to feed, 5 = country impacts
-PIPELINE_COMPONENTS: list = [2,3,4,5]
+PIPELINE_COMPONENTS: list = [5]
 
 cdat = read_excel("input_data/nocsDataExport_20251021-164754.xlsx")
 COUNTRIES = [_.upper() for _ in cdat["ISO3"].unique().tolist() if isinstance(_, str)]
@@ -143,7 +144,8 @@ def main(years=list(range(1986, 2022)),
         error_data = calculate_error_matrix(
             conversion_opt=conversion_option,
             prefer_import=prefer_import,
-            historic="")
+            historic="",
+            iterations=ERROR_ITERATIONS)
     else:
         error_data = None
 
