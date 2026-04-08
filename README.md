@@ -1,5 +1,6 @@
 <p align="center">
-  <img src="input_data/NatFood_cover_final_TSB_2507032.png" />
+  <img src="input_data/NatFood_cover_final_TSB_2507032.png" alt=https://spinach-flower-g4yx.squarespace.com/ />
+  
 </p>
 
 <p align="center">
@@ -139,9 +140,10 @@ PIPELINE_COMPONENTS:list = [0]
 Component options:
 - `0` = Full pipeline (all components)
 - `1` = Unzipping data only
-- `2` = Trade matrix calculation
-- `3` = Animal products to feed calculation
-- `4` = Country-level impact calculations (as in [LIFE](https://github.com/thomasball42/food_LIFE))
+- `2` = Error matrix calculation
+- `3` = Trade matrix calculation
+- `4` = Animal products to feed calculation
+- `5` = Country-level impact calculations (as in [LIFE](https://github.com/thomasball42/food_LIFE))
 
 ### Countries
 Which countries to analyse in detail:
