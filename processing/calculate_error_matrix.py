@@ -15,6 +15,8 @@ from tqdm import tqdm
 from numba import jit
 import matplotlib.pyplot as plt
 import warnings
+import os
+import pickle
 warnings.filterwarnings("ignore", category=FutureWarning)
 np.seterr(divide="ignore")
 
@@ -36,17 +38,13 @@ def calculate_mrio_matrices(Z, p):
     """JIT-compiled version of matrix calculations"""
     summation_vector = np.ones(len(p))
     x = p + Z @ summation_vector
-    
     one_over_x = np.where(x != 0, 1.0/x, 0.0)
     A = Z @ np.diag(one_over_x)
-    
     I = np.eye(len(p))
     R = np.linalg.pinv(I - A) @ np.diag(p) # note pseudo-inverse rather than inverse (inverse creates some extra)
-    
     ac = x - Z.sum(axis=0)
     c = ac * one_over_x
     R_bar = np.diag(c) @ R
-    
     return R_bar
 
 @jit(nopython=True)
@@ -61,56 +59,11 @@ def calculate_naive_matrix(Z, p):
     R_error = G @ attributable_prod_and_import
     return R_error
 
-def monte_carlo(Z, p, R_bar, iterations=1000):
-    """Monte Carlo simulation to estimate uncertainty in R_bar"""
-    results = []
-    np.random.seed(0)
-    for _ in range(iterations):
-        Z_perturbed = Z * (1 + np.random.normal(0, 0.1, Z.shape)) # 10% noise
-        p_perturbed = p * (1 + np.random.normal(0, 0.1, p.shape)) # 10% noise
-        R_perturbed = calculate_mrio_matrices(Z_perturbed, p_perturbed)
-        # Here you could store or analyze R_perturbed to estimate uncertainty
-        R_sum = np.sum(R_perturbed)
-        R_sum_import = np.sum(R_perturbed - np.diag(np.diag(R_perturbed)))
-        R_share = R_sum_import / R_sum
-        results.append(R_share)
 
-    R_sum = np.sum(R_bar)
-    R_sum_import = np.sum(R_bar - np.diag(np.diag(R_bar)))
-    R_truth = R_sum_import / R_sum if R_sum != 0 else 0
-    results = np.array(results) - R_truth
-    std_dev = np.std(results)
-    return std_dev
-
-def mrio_model(item_code, year, p_data, prod_data):
-    """
-    Perform matrix operations for MRIO calculation
-    Equivalent to matrix.operation function in R
-    
-    Args:
-        item_code: Primary item code to process
-        year: Year to process
-        primary_data: DataFrame with trade data in primary equivalents
-        production_all: DataFrame with production data
-    
-    Returns:
-        DataFrame with Consumer_Country_Code, Producer_Country_Code, Value, Item_Code, Year
-    """
-
-    data_subset = p_data[(p_data["Year"] == year) & (p_data["primary_item"] == item_code)]
-    production_data_subset = prod_data[(prod_data["Year"] == year) & (prod_data["Item_Code"] == item_code)]
-
+def mrio_model(year, p_data, prod_data, countries, country_dict):
+    data_subset = p_data[(p_data["Year"] == year)]
+    production_data_subset = prod_data[(prod_data["Year"] == year)]
     production_data_subset.loc[production_data_subset["Value"].isna(), "Value"] = 0
-
-    producers = production_data_subset["Area_Code"].unique()
-    importers = data_subset["Consumer_Country_Code"].unique()
-    exporters = data_subset["Producer_Country_Code"].unique()
-
-    traders = np.union1d(importers, exporters)
-    countries = np.union1d(producers, traders)
-
-    country_dict = {code: idx for idx, code in enumerate(countries)}
-
     Z = np.zeros((len(countries), len(countries)))
 
     for _, row in data_subset.iterrows():
@@ -131,28 +84,7 @@ def mrio_model(item_code, year, p_data, prod_data):
     production_minimum = exports - imports
     production_minimum[production_minimum < 0] = 0
     p = np.where(p<production_minimum, production_minimum, p)
-
-    R_bar = calculate_mrio_matrices(Z, p)
-    std = monte_carlo(Z, p, R_bar)
-    R_error = calculate_naive_matrix(Z, p)
-    R_rel_error = np.divide(np.abs(R_bar - R_error), np.where(R_bar != 0, R_bar, 1))
-
-    R_bar = np.round(R_bar, 2)
-    # R_rel_error = np.round(R_rel_error, 5)
-    nonzero_mask = R_bar != 0
-    i_indices, j_indices = np.where(nonzero_mask)
-
-    if len(i_indices) == 0:
-        return [], std
-    
-    return [{
-        "Consumer_Country_Code": countries[i],
-        "Producer_Country_Code": countries[j], 
-        "Value_Sum": R_bar[i, j],
-        "primary_item": item_code,
-        "Year": year,
-        "Value_Error": R_rel_error[i, j],
-    } for i, j in zip(i_indices, j_indices)], std
+    return Z, p
 
 
 def calculate_conversion_factors(conversion_opt, content_factors, item_map):
@@ -183,17 +115,22 @@ def calculate_conversion_factors(conversion_opt, content_factors, item_map):
         return conversion_factors
 
 
-def calculate_trade_matrix(
-        conversion_opt="dry_matter",
-        prefer_import="import", 
-        year=2013,
-        historic="Historic",
-        results_dir=Path("./results")):
-    """Calculate Trade Matrix module for MRIO pipeline"""
-
+def load_data(conversion_opt="dry_matter",
+        prefer_import="import",
+        historic="Historic"):
     print("    Loading trade data...")
+    cache_file_primary = "primary_data_cache.pkl"
+    cache_file_production = "production_all_cache.pkl"
 
-    # File paths
+    if os.path.exists(cache_file_primary) and os.path.exists(cache_file_production):
+        with open(cache_file_primary, 'rb') as f:
+            primary_data = pickle.load(f)
+        with open(cache_file_production, 'rb') as f:
+            production_all = pickle.load(f)
+        print("    Loaded cached data...")
+        return primary_data, production_all    
+    
+
     item_map_filename = "input_data/primary_item_map_feed.csv" 
     trade_filename = "input_data/Trade_DetailedTradeMatrix_E_All_Data_(Normalized).csv" # FAOSTAT import
     reporting_filename = "input_data/Reporting_Dates.xls"
@@ -201,8 +138,6 @@ def calculate_trade_matrix(
     production_filename = "input_data/Production_Crops_Livestock_E_All_Data_(Normalized).csv"
     sugar_processing_filename = f"input_data/FoodBalanceSheets{historic}_E_All_Data_(Normalized).csv"
 
-
-    # Load Files
     item_map = pd.read_csv(item_map_filename, encoding="Latin-1")
     raw_trade_data = pd.read_csv(trade_filename, encoding="Latin-1")
     reporting_date = pd.read_excel(reporting_filename)
@@ -210,8 +145,6 @@ def calculate_trade_matrix(
     sugar_processing = pd.read_csv(sugar_processing_filename, encoding="Latin-1")                                
     production = pd.read_csv(production_filename, low_memory=False)
 
-
-    # Rename columns
     item_map.rename(columns=lambda x: x.replace(" ", "_"), inplace=True)
     raw_trade_data.rename(columns=lambda x: x.replace(" ", "_"), inplace=True)
     reporting_date.rename(columns=lambda x: x.replace(" ", "_"), inplace=True)
@@ -223,36 +156,22 @@ def calculate_trade_matrix(
     indian_cattle_prod = [998071.03, 989522.18, 980561.33, 971291.48, 960991.17, 931645.26, 913009.07, 899727.75, 901236.5, 915639.94, 915639.94, 915639.94, 915639.94, 915639.94]
     production.loc[(production["Item_Code"]==867)&(production["Area_Code"]==100)&(production["Element_Code"]==5510)&(production["Year"]>=2010), "Value"] = indian_cattle_prod
 
-    # Select year
-    raw_trade_data = raw_trade_data[raw_trade_data["Year"] == year]
-    sugar_processing = sugar_processing[sugar_processing["Year"] == year]
-    production = production[production["Year"] == year]
+    raw_trade_data = raw_trade_data[(raw_trade_data["Year"] >= 2010)&(raw_trade_data["Year"]<=2021)]
+    sugar_processing = sugar_processing[(sugar_processing["Year"] >= 2010)&(sugar_processing["Year"]<=2021)]
+    production = production[(production["Year"] >= 2010)&(production["Year"]<=2021)]
 
     # Tweaks for slightly different files
     production_all = production[["Area_Code", "Area", "Item_Code", "Item", "Element_Code", "Element", "Year_Code", "Year", "Unit", "Value"]]
 
     item_map[item_map["FAO_code"]==156] = [156, "Sugar cane", 2545, "Sugar agregate"]
     item_map[item_map["FAO_code"]==157] = [157, "Sugar beet", 2545, "Sugar agregate"]
-    # production_crops.drop(columns=["Note"], inplace=True)
-    # production_offals = sugar_processing[(sugar_processing["Element_Code"] == 5511) & (sugar_processing["Item_Code"] == 2736)]
-    # production_offals['Element_Code'] = 5510
-    # production_offals['Value'] = production_offals['Value']*1000
-    
     print("    Preprocessing trade data...")
-
-    # Combine and filter
-    # production_all = pd.concat([production_all, production_offals], ignore_index=True)
     production_all = production_all[(production_all["Area_Code"]<300) & (production_all["Element_Code"]==5510)]
-
     # harmonise import and export data
-
     data_import = raw_trade_data[raw_trade_data["Element_Code"] == 5610][["Reporter_Country_Code", "Partner_Country_Code", "Element_Code", "Item_Code", "Year", "Value"]]
     data_export = raw_trade_data[raw_trade_data["Element_Code"] == 5910][["Partner_Country_Code", "Reporter_Country_Code", "Element_Code", "Item_Code", "Year", "Value"]]
-
-
     data_import = eliminate_dates(reporting_date, data_import)
     data_export = eliminate_dates(reporting_date, data_export)
-
     data_import.loc[data_import["Reporter_Country_Code"] == data_import["Partner_Country_Code"], "Value"] = 0
     data_export.loc[data_export["Reporter_Country_Code"] == data_export["Partner_Country_Code"], "Value"] = 0
     data_import = data_import[data_import["Value"] != 0]
@@ -294,38 +213,158 @@ def calculate_trade_matrix(
         (primary_data["primary_item"].notna()) &
         (primary_data["Value_Sum"].notna())]
 
+    with open(cache_file_primary, 'wb') as f:
+        pickle.dump(primary_data, f)
+    with open(cache_file_production, 'wb') as f:
+        pickle.dump(production_all, f)
+    print("    Cached data saved...")
+    return primary_data, production_all    
 
-    
-    # Add sugar production to main production data
 
+def calculate_error_matrix(
+        conversion_opt="dry_matter",
+        prefer_import="import",
+        historic=""):
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        e = calculate_err_matrix(conversion_opt, prefer_import, historic)
+        return e
 
+def calculate_err_matrix(
+        conversion_opt="dry_matter",
+        prefer_import="import",
+        historic=""):
+    """Calculate Trade Matrix module for MRIO pipeline"""
+
+    primary_data, production_all = load_data(conversion_opt, prefer_import, historic)
     unique_combinations = primary_data[["Year", "primary_item"]].drop_duplicates()
+    monte_carlo_results = {}
 
-    
+    for ic in tqdm(unique_combinations["primary_item"].unique(), desc="    Calculating error matrix for each primary item"):
+        p_data = primary_data[primary_data["primary_item"] == ic]
+        prod_data = production_all[production_all["Item_Code"] == ic]
+        producers = prod_data["Area_Code"].unique()
+        importers = p_data["Consumer_Country_Code"].unique()
+        exporters = p_data["Producer_Country_Code"].unique()
+        traders = np.union1d(importers, exporters)
+        countries = np.union1d(producers, traders)
+        country_dict = {code: idx for idx, code in enumerate(countries)}
+        Zs = []
+        ps = []
+
+        yrs = unique_combinations[unique_combinations["primary_item"] == ic]["Year"].unique()
+        for yr in yrs:
+            Z, p = mrio_model(yr, p_data, prod_data, countries, country_dict)
+            if Z.shape != (0,):
+                Zs.append(Z)
+                ps.append(p)
+        Zs = np.array(Zs)
+        Ps = np.array(ps)
 
 
-    mrio_output = []
-    stds = []
-    for index, (yr, ic) in tqdm(enumerate(unique_combinations.values), leave=True, position=0):
-        print(ic)
-        m, std = mrio_model(ic, yr, primary_data, production_all)
-        mrio_output += m
-        stds.append(std)
-    plt.hist(stds, bins=50)
-    plt.title("Distribution of Monte Carlo standard deviations across items")
-    plt.xlabel("Standard Deviation of Commodity import share")
-    plt.ylabel("Frequency")
-    plt.show()
-     
+        iqr = np.nanpercentile(np.where(np.isclose(Zs,0), np.nan, Zs), 75, axis=0) - np.nanpercentile(np.where(np.isclose(Zs,0), np.nan, Zs), 25, axis=0)
+        q3 = np.nanpercentile(np.where(np.isclose(Zs,0), np.nan, Zs), 75, axis=0)
+        p_iqr = np.nanpercentile(np.where(np.isclose(Ps,0), np.nan, Ps), 75, axis=0) - np.nanpercentile(np.where(np.isclose(Ps,0), np.nan, Ps), 25, axis=0)
+        p_q3 = np.nanpercentile(np.where(np.isclose(Ps,0), np.nan, Ps), 75, axis=0)
+        Zs = np.where(Zs>q3+1.5*iqr, 0, Zs) # remove outliers
+        Ps = np.where(Ps>p_q3+1.5*p_iqr, 0, Ps) # remove outliers
+
+        std = np.nanstd(np.where(np.isclose(Zs,0), np.nan, Zs), axis=0)
+        mean = np.nanmean(np.where(np.isclose(Zs,0), np.nan, Zs), axis=0)
+        p_std = np.nanstd(np.where(np.isclose(Ps,0), np.nan, Ps), axis=0)
+        p_mean = np.nanmean(np.where(np.isclose(Ps,0), np.nan, Ps), axis=0)
+
+        mean[np.isnan(mean)] = 0
+        p_mean[np.isnan(p_mean)] = 0
+
+        std[np.isnan(std)] = 0
+        std[std<0] = 0
+        p_std[np.isnan(p_std)] = 0
+        p_std[p_std<0] = 0
+
+        Z = mean
+        p = p_mean
+
+        truth = calculate_mrio_matrices(Z, p)
+        naive = calculate_naive_matrix(Z, p)
+
+        R_stdev = np.abs(naive - truth)
+        R_s = R_stdev[~np.isnan(R_stdev)]
+        R_m = truth[~np.isnan(truth)]
+        R_s = R_s[R_m!=0]
+        R_m = R_m[R_m!=0]
+        if np.sum(R_m) == 0:
+            error = 1
+        else:
+            error = np.average(R_s/R_m, weights=R_m) + 1
+        # print(ic)
+        R_std = monte_carlo(Z, p, std, p_std, error)
+        output = {"primary_item": ic, "R_std": R_std, "countries": countries, "country_dict": country_dict, "R_bar": truth}
+        monte_carlo_results[ic] = output
+
+    # print(monte_carlo_results)
+    return monte_carlo_results
+
+
+        # Rmax = np.max(truth)
+        # R_err[np.isnan(R_err)] = 0
+        # R_err = np.abs(R_err)
+        # thresh = 100
+        # truth[truth<thresh] = thresh
+        # R_err[truth==thresh] = 0
+
+        # fig, axs = plt.subplots(1, 2, figsize=(12, 6))
+        # axs[0].imshow(truth, cmap="viridis", norm="log", vmin=thresh, vmax=Rmax, interpolation="none")
+        # axs[1].imshow(R_err, cmap="viridis", vmin=0, vmax=2, interpolation="none")
+        # axs[0].set_title("R_bar (Final MRIO Matrix)")
+        # cbar0 = plt.colorbar(axs[0].images[0], ax=axs[0])
+        # cbar0.set_label("Value")
+        
+        # axs[1].set_title("Relative Error in R_bar")
+        # cbar1 = plt.colorbar(axs[1].images[0], ax=axs[1])
+        # cbar1.set_label("Relative Error")
+        # plt.show()
+
+
+def monte_carlo(Z, p, Z_std, p_std, e, iterations=1000):
+    """Monte Carlo simulation to estimate uncertainty in R_bar"""
+    results = []
+    np.random.seed(0)
+    t = 5
+    for _ in range(iterations):
+        Z_noise = np.random.normal(0, Z_std)*e # err% noise
+        Z_noise[Z_noise<-t*Z_std] = -t*Z_std[Z_noise<-t*Z_std] # limit on pertubation
+        Z_noise[Z_noise>t*Z_std] = t*Z_std[Z_noise>t*Z_std] # limit on pertubation
+        Z_perturbed = Z+Z_noise
+        Z_perturbed[Z_perturbed<0] = 0
+
+        p_noise = np.random.normal(0, p_std)*e
+        p_noise[p_noise<-t*p_std] = -t*p_std[p_noise<-t*p_std] # limit on pertubation
+        p_noise[p_noise>t*p_std] = t*p_std[p_noise>t*p_std] # limit on pertubation
+        p_perturbed = p+p_noise# err% noise
+        p_perturbed[p_perturbed<0] = 0
+
+        R_perturbed = calculate_mrio_matrices(Z_perturbed, p_perturbed)
+        results.append(R_perturbed)
+
+    results = np.array(results)
+    R_mean = np.mean(results, axis=0)
+    R_stdev = np.std(results, axis=0)
+    R_s = R_stdev[~np.isnan(R_stdev)]
+    R_m = R_mean[~np.isnan(R_stdev)]
+    R_s = R_s[R_m!=0]
+    R_m = R_m[R_m!=0]
+    return R_stdev
+        
+
 
 if __name__ == "__main__":
     import os
     os.chdir("../")
     # Example usage
-    calculate_trade_matrix(
-        conversion_opt="dry_matter",
-        prefer_import="import",
-        year=2010,
-        historic="",
-        results_dir=Path("./results")
-    )
+    import warnings
+    import pickle
+    import os
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        calculate_error_matrix()
