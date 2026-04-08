@@ -3,7 +3,7 @@
 This is a Python conversion of the R-based Multi-Regional Input-Output (MRIO) pipeline for analyzing agricultural trade and its impact on cropland use and species habitats.
 
 
-> [!IMPORTANT] Code Origins
+> [!IMPORTANT]
 > This code is built upon code from the following publications:
 >
 > **Schwarzmueller, F. & Kastner, T (2022), Agricultural trade and its impact on cropland use and the global loss of species' habitats. Sustainability Science, doi: [10.1007/s11625-022-01138-7](https://link.springer.com/article/10.1007/s11625-022-01138-7)**
@@ -167,10 +167,9 @@ For each processed year, the pipeline generates:
 
 ---
 > [!NOTE]
-> Performance
 > Processing time: ~20 minutes for all years (1986-2013) on a machine with 32GB RAM
 > Recommended minimum 32GB RAM
 
 ---
-> [!NOTE]  Reliability
+> [!CAUTION]
 > In theory this code should run cleanly for 1986 - 2022, however commodity crosswalks are missing for the 2000 MAPSPAM commodities and FAO data mapping is unreliable prior to 2010. We therefore cannot guarantee the accuracy of results prior to 2010. 
