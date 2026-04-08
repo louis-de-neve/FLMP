@@ -3,14 +3,14 @@
 This is a Python conversion of the R-based Multi-Regional Input-Output (MRIO) pipeline for analyzing agricultural trade and its impact on cropland use and species habitats.
 
 
->[!IMPORTANT]Code Origins
->This code is built upon code from the following publications:
+> [!IMPORTANT] Code Origins
+> This code is built upon code from the following publications:
 >
->**Schwarzmueller, F. & Kastner, T (2022), Agricultural trade and its impact on cropland use and the global loss of species' habitats. Sustainability Science, doi: [10.1007/s11625-022-01138-7](https://link.springer.com/article/10.1007/s11625-022-01138-7)**
+> **Schwarzmueller, F. & Kastner, T (2022), Agricultural trade and its impact on cropland use and the global loss of species' habitats. Sustainability Science, doi: [10.1007/s11625-022-01138-7](https://link.springer.com/article/10.1007/s11625-022-01138-7)**
 >
->**Ball, T.S., Dales, M., Eyres, A. et al. Food impacts on species extinction risks can vary by three orders of magnitude. Nat Food 6, 848–856 (2025). doi: [10.1038/s43016-025-01224-w](https://www.nature.com/articles/s43016-025-01224-w)**
+> **Ball, T.S., Dales, M., Eyres, A. et al. Food impacts on species extinction risks can vary by three orders of magnitude. Nat Food 6, 848–856 (2025). doi: [10.1038/s43016-025-01224-w](https://www.nature.com/articles/s43016-025-01224-w)**
 >
->Please cite appropriately when using this code.
+> Please cite appropriately when using this code.
 
 ## Files Overview
 
@@ -166,10 +166,10 @@ For each processed year, the pipeline generates:
    - `food_commodity_impacts.csv` has been added with calculated per kg impacts
 
 ---
->[!NOTE]Performance
->Processing time: ~20 minutes for all years (1986-2013) on a machine with 32GB RAM
->Recommended minimum 32GB RAM
+> [!NOTE] Performance
+> Processing time: ~20 minutes for all years (1986-2013) on a machine with 32GB RAM
+> Recommended minimum 32GB RAM
 
 ---
->[!NOTE]Reliability
+> [!NOTE] Reliability
 > In theory this code should run cleanly for 1986 - 2022, however commodity crosswalks are missing for the 2000 MAPSPAM commodities and FAO data mapping is unreliable prior to 2010. We therefore cannot guarantee the accuracy of results prior to 2010. 
