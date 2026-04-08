@@ -24,6 +24,7 @@ import multiprocessing
 
 from processing.unzip_data import unzip_data
 from processing.calculate_trade_matrix import calculate_trade_matrix
+from processing.calculate_error_matrix import calculate_error_matrix
 from processing.animal_products_to_feed import animal_products_to_feed
 
 from provenance._get_biodiversity_vals import fetch_biodiversity_vals_path
@@ -51,8 +52,8 @@ WORKING_DIR = '.'
 N_PROCESSES = 8
 
 # Pipeline components to run
-# 0 = all, 1 = unzip, 2 = trade matrix, 3 = animal products to feed, 4 = country impacts
-PIPELINE_COMPONENTS: list = [3,4]
+# 0 = all, 1 = unzip, error matrix, 3 = trade matrix, 4 = animal products to feed, 5 = country impacts
+PIPELINE_COMPONENTS: list = [2,3,4,5]
 
 cdat = read_excel("input_data/nocsDataExport_20251021-164754.xlsx")
 COUNTRIES = [_.upper() for _ in cdat["ISO3"].unique().tolist() if isinstance(_, str)]
@@ -107,9 +108,10 @@ def main(years=list(range(1986, 2022)),
     component_dict = {
         0: "Full pipeline",
         1: "Unzipping data",
-        2: "Trade matrix calculation",
-        3: "Animal products to feed calculation",
-        4: "Country-level provenance calculations",
+        2: "Error matrix calculation",
+        3: "Trade matrix calculation",
+        4: "Animal products to feed calculation",
+        5: "Country-level provenance calculations",
     }
 
     print(f"""\nStarting MRIO calculations with options:
@@ -136,6 +138,14 @@ def main(years=list(range(1986, 2022)),
 
     if pipeline_components == [1]:
         return
+    
+    if (0 in pipeline_components) or (2 in pipeline_components):
+        error_data = calculate_error_matrix(
+            conversion_opt=conversion_option,
+            prefer_import=prefer_import,
+            historic="")
+    else:
+        error_data = None
 
     if n_processes is None:
         try:
@@ -159,15 +169,16 @@ def main(years=list(range(1986, 2022)),
 
         hist = "Historic" if year < 2010 else ""
 
-        if (0 in pipeline_components) or (2 in pipeline_components):
+        if (0 in pipeline_components) or (3 in pipeline_components):
             calculate_trade_matrix(
                 conversion_opt=conversion_option,
                 prefer_import=prefer_import,
                 year=year,
                 historic=hist,
-                results_dir=results_dir)
+                results_dir=results_dir,
+                all_error_data=error_data)
 
-        if (0 in pipeline_components) or (3 in pipeline_components):
+        if (0 in pipeline_components) or (4 in pipeline_components):
             animal_products_to_feed(
                 prefer_import=prefer_import,
                 conversion_opt=conversion_option,
@@ -175,7 +186,7 @@ def main(years=list(range(1986, 2022)),
                 historic=hist,
                 results_dir=results_dir)
 
-        if (0 in pipeline_components) or (4 in pipeline_components):
+        if (0 in pipeline_components) or (5 in pipeline_components):
             print("    Processing country-level provenance and impacts...")
             missing_items = []
             fetch_biodiversity_vals_path(year, "./input_data")

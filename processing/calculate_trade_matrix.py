@@ -60,7 +60,7 @@ def calculate_naive_matrix(Z, p):
     R_error = G @ attributable_prod_and_import
     return R_error
 
-def mrio_model(item_code, year, p_data, prod_data):
+def mrio_model(item_code, year, p_data, prod_data, error_data=None):
     """
     Perform matrix operations for MRIO calculation
     Equivalent to matrix.operation function in R
@@ -74,20 +74,25 @@ def mrio_model(item_code, year, p_data, prod_data):
     Returns:
         DataFrame with Consumer_Country_Code, Producer_Country_Code, Value, Item_Code, Year
     """
-
+    
     data_subset = p_data[(p_data["Year"] == year) & (p_data["primary_item"] == item_code)]
     production_data_subset = prod_data[(prod_data["Year"] == year) & (prod_data["Item_Code"] == item_code)]
 
     production_data_subset.loc[production_data_subset["Value"].isna(), "Value"] = 0
 
-    producers = production_data_subset["Area_Code"].unique()
-    importers = data_subset["Consumer_Country_Code"].unique()
-    exporters = data_subset["Producer_Country_Code"].unique()
+    if error_data is not None and sum(error_data["R_bar"][~np.isnan(error_data["R_bar"])]) > 0:
+        countries = error_data["countries"]
+        country_dict = error_data["country_dict"]
 
-    traders = np.union1d(importers, exporters)
-    countries = np.union1d(producers, traders)
+    else:
+        producers = production_data_subset["Area_Code"].unique()
+        importers = data_subset["Consumer_Country_Code"].unique()
+        exporters = data_subset["Producer_Country_Code"].unique()
 
-    country_dict = {code: idx for idx, code in enumerate(countries)}
+        traders = np.union1d(importers, exporters)
+        countries = np.union1d(producers, traders)
+
+        country_dict = {code: idx for idx, code in enumerate(countries)}
 
     Z = np.zeros((len(countries), len(countries)))
 
@@ -111,11 +116,16 @@ def mrio_model(item_code, year, p_data, prod_data):
     p = np.where(p<production_minimum, production_minimum, p)
 
     R_bar = calculate_mrio_matrices(Z, p)
-    R_error = calculate_naive_matrix(Z, p)
-    R_rel_error = np.divide(np.abs(R_bar - R_error), np.where(R_bar != 0, R_bar, 1))
+
+    if error_data is not None and sum(error_data["R_bar"][~np.isnan(error_data["R_bar"])]) > 0:
+        truth = error_data["R_bar"]
+        R_error = error_data["R_std"]
+        R_rel_error = np.divide(np.abs(R_error), np.abs(truth))
+    else:
+        R_error = calculate_naive_matrix(Z, p)
+        R_rel_error = np.divide(np.abs(R_bar - R_error), np.where(R_bar != 0, R_bar, 1))
 
     R_bar = np.round(R_bar, 2)
-    # R_rel_error = np.round(R_rel_error, 5)
     nonzero_mask = R_bar != 0
     i_indices, j_indices = np.where(nonzero_mask)
 
@@ -165,7 +175,8 @@ def calculate_trade_matrix(
         prefer_import="import", 
         year=2013,
         historic="Historic",
-        results_dir=Path("./results")):
+        results_dir=Path("./results"),
+        all_error_data=None):
     """Calculate Trade Matrix module for MRIO pipeline"""
 
     output_filename = results_dir / str(year) / ".mrio" / f"TradeMatrix_{prefer_import}_{conversion_opt}.csv"
@@ -316,7 +327,8 @@ def calculate_trade_matrix(
 
     mrio_output = []
     for index, (yr, ic) in enumerate(tqdm(unique_combinations.values, desc="    Processing MRIO models", leave=True, position=0)):
-        m = mrio_model(ic, yr, primary_data, production_all)
+        error_data = all_error_data.get(ic) if all_error_data is not None else None
+        m = mrio_model(ic, yr, primary_data, production_all, error_data)
         mrio_output += m
         
     cols = list(primary_data.columns)
