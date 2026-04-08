@@ -1,7 +1,31 @@
-# MRIO Agricultural Trade Analysis Pipeline - Python Version
-
+<!-- Title -->
+<h1 align="center">
+  MRIO Agricultural Trade Analysis Pipeline - Python Version
+</h1>
+<p align="center">
 This is a Python conversion of the R-based Multi-Regional Input-Output (MRIO) pipeline for analyzing agricultural trade and its impact on cropland use and species habitats.
+</p>
+<p align="center">
+<a href="https://github.com/louis-de-neve/mrio_pipeline/releases">
+    <img alt="GitHub tag (latest SemVer pre-release)" src="https://img.shields.io/github/v/tag/louis-de-neve/mrio_pipeline?include_prereleases&label=latest%20version&logo=github&sort=semver&color=green">
+  </a>
+<a href="https://python.org">
+    <img alt="lang" src="https://img.shields.io/badge/langauge-Python-3776AB">
+</a>
+<a href="https://python.org">
+    <img alt="lang" src="https://img.shields.io/badge/version-3.13.5-3776AB?logo=python&logoColor=f5f5f5">
+</a>
+<a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">
+    <img alt="MIT license" src="https://img.shields.io/badge/License-CC BY--NC--SA-orange?logo=CreativeCommons&logoColor=f5f5f5">
+</a>
+<a href="https://link.springer.com/article/10.1007/s11625-022-01138-7">
+    <img alt="Nature" src="https://img.shields.io/badge/cite-Sustainability Science-darkgreen">
+</a>
+<a href="https://www.nature.com/articles/s43016-025-01224-w">
+    <img alt="Nature" src="https://img.shields.io/badge/cite-Nature Food-green">
+</a>
 
+</p>
 
 > [!IMPORTANT]
 > This code is built upon code from the following publications:
