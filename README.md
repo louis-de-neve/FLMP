@@ -1,10 +1,7 @@
-<!-- Title -->
-<h1 align="center">
-  MRIO Agricultural Trade Analysis Pipeline - Python Version
-</h1>
 <p align="center">
-This is a Python conversion of the R-based Multi-Regional Input-Output (MRIO) pipeline for analyzing agricultural trade and its impact on cropland use and species habitats.
+  <img src="input_data/NatFood_cover_final_TSB_2507032.png" />
 </p>
+
 <p align="center">
 <a href="https://github.com/louis-de-neve/mrio_pipeline/releases">
     <img alt="GitHub tag (latest SemVer pre-release)" src="https://img.shields.io/github/v/tag/louis-de-neve/mrio_pipeline?include_prereleases&label=latest%20version&logo=github&sort=semver&color=green">
@@ -26,6 +23,13 @@ This is a Python conversion of the R-based Multi-Regional Input-Output (MRIO) pi
 </a>
 
 </p>
+<!-- Title -->
+<h1 align="center">
+  FoodLIFE MRIO Pipeline - FLMP</h1>
+<p align="center">
+This is a Python conversion of an R-based Multi-Regional Input-Output (<a href="https://zenodo.org/records/5751294">MRIO</a>) model merged with <a href="https://github.com/thomasball42/Quantifying-the-impact-of-food-we-eat-on-species-extinctions">FoodLife</a> for the purpose of analyzing agricultural trade and its impact on cropland use and species habitats.
+</p>
+
 
 > [!IMPORTANT]
 > This code is built upon code from the following publications:
