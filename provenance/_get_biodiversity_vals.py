@@ -67,10 +67,12 @@ def interpolate_vals(year, spam_years, datPath):
     return outpath
 
 
-def fetch_biodiversity_vals_path(year, datPath):
+def fetch_biodiversity_vals_path(year, datPath, use_2020=True):
 
     spam_years = os.listdir(os.path.join(datPath, "mapspam_outputs", "outputs"))
     spam_years = [int(_) for _ in spam_years if _.isdigit()]
+    if not use_2020:
+        list(set(spam_years)-set([2020]))
 
     distance = min([np.abs(yr-year) for yr in spam_years])
     spam_yr = [year + distance * i for i in [-1, 1] if year + distance * i in spam_years][0]

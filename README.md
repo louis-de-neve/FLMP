@@ -131,6 +131,12 @@ Choose whether to prefer import or export data:
 prefer_import = "import"  # or "export"
 ```
 
+#### Use 2020 Data
+Choose whether to use 2020 mapspam data:
+```python
+USE_2020_DATA = True
+```
+
 ### Pipeline Components
 Control which parts of the pipeline to run:
 ```python

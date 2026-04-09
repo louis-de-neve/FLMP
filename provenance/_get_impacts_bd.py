@@ -31,7 +31,7 @@ def get_wwf_pbd(datPath):
 import warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
-def get_impacts(wdf, year, coi, filename, results_dir=Path("./results")):
+def get_impacts(wdf, year, coi, filename, results_dir=Path("./results"), use_2020=True):
     # setup
     country_savefile_path = results_dir / str(year) / coi
     datPath = "./input_data"
@@ -137,7 +137,7 @@ def get_impacts(wdf, year, coi, filename, results_dir=Path("./results")):
     # bd_opp_cost = bd_opp_cost[bd_opp_cost.band_name=="all"]
 
     # bd_path = os.path.join(datPath, "mapspam_outputs", "outputs", str(spam_yr), f"processed_results_{spam_yr}.csv")#
-    bd_path, spam_yr = fetch_biodiversity_vals_path(year, datPath)
+    bd_path, spam_yr = fetch_biodiversity_vals_path(year, datPath, use_2020)
 
     bd_opp_cost = pd.read_csv(bd_path)
 

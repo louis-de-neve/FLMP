@@ -50,6 +50,8 @@ PREFER_IMPORT = "import"
 # select working directory
 WORKING_DIR = '.'
 
+USE_2020_DATA = True
+
 # Multiprocessing settings
 N_PROCESSES = 8
 
@@ -201,8 +203,8 @@ def main(years=list(range(1986, 2022)),
                         cons, feed = consumption_provenance_main(year, country, hist, results_dir=results_dir)
                         if len(cons) == 0:
                             continue
-                        bf = get_impacts_main(feed, year, country, "feed_impacts_wErr.csv", results_dir=results_dir)
-                        bh = get_impacts_main(cons, year, country, "human_consumed_impacts_wErr.csv", results_dir=results_dir)
+                        bf = get_impacts_main(feed, year, country, "feed_impacts_wErr.csv", results_dir=results_dir, use_2020=USE_2020_DATA)
+                        bh = get_impacts_main(cons, year, country, "human_consumed_impacts_wErr.csv", results_dir=results_dir, use_2020=USE_2020_DATA)
                         if country == "WORLD":
                             mi = process_dat_main_global(year, "WORLD", bh, bf, results_dir=Path(RESULTS_DIR))
                         else:
