@@ -357,7 +357,7 @@ def monte_carlo(Z, p, Z_std, p_std, e, iterations=1000):
     R_m = R_mean[~np.isnan(R_stdev)]
     R_s = R_s[R_m!=0]
     R_m = R_m[R_m!=0]
-    print(f"Average relative error in R_bar: {np.average(R_s/R_m, weights=R_m)}")
+    # print(f"Average relative error in R_bar: {np.average(R_s/R_m, weights=R_m)}")
     return R_stdev
         
 
