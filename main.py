@@ -87,8 +87,8 @@ AMORTIZATION_YEARS = 30
 BD_BAND_NAME = "all"
 
 # Which band of the carbon opportunity cost (coc_outputs) data to use.
-# Available bands: "median", "5th_percentile", "95th_percentile".
-COC_BAND_NAME = "median"
+# Available bands: "agri_potential_carbon".
+COC_BAND_NAME = "agri_potential_carbon"
 
 cdat = read_excel("input_data/nocsDataExport_20251021-164754.xlsx")
 COUNTRIES = [_.upper() for _ in cdat["ISO3"].unique().tolist() if isinstance(_, str)] if COUNTRIES is None else COUNTRIES
@@ -153,7 +153,7 @@ def _process_year_matrices(year: int, hist: str, conversion_option: str, prefer_
 
 
 def _process_country(country: str, year: int, hist: str, results_dir: Path, overwrite=True,
-                      amortization_years=30, bd_band_name="all", coc_band_name="median",
+                      amortization_years=30, bd_band_name="all", coc_band_name="agri_potential_carbon",
                       status=None, completed=None, lock=None):
     """
     Runs consumption/feed provenance + biodiversity impact assignment for a
@@ -274,7 +274,7 @@ def main(years=list(range(1986, 2022)),
          overwrite=True,
          amortization_years=30,
          bd_band_name="all",
-         coc_band_name="median"):
+         coc_band_name="agri_potential_carbon"):
 
     if countries is None:
         countries = COUNTRIES

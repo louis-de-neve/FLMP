@@ -13,10 +13,12 @@ import sys
 
 from provenance._get_biodiversity_vals import fetch_biodiversity_vals_path
 
-def fetch_coc_vals_path(year, datPath):
-    coc_years = [2010, 2020]
+def fetch_coc_vals_path(year, datPath, use_2020=True):
+    # the coc values are computed on the mapspam crop distributions, so the vintages
+    # available here mirror the mapspam years and follow the same use_2020 switch.
+    coc_years = [2010, 2020] if use_2020 else [2010]
     coc_yr = min(coc_years, key=lambda y: abs(y - year))  # ties -> 2010
-    return os.path.join(datPath, "coc_outputs", f"processed_coc_data_{coc_yr}.csv"), coc_yr
+    return os.path.join(datPath, "coc_outputs", f"processed_coc_data_walker_mapspam{coc_yr}.csv"), coc_yr
 
 def get_wwf_pbd(datPath):
     file_name = "Planet-Based Diets - Data and Viewer.xlsx"
@@ -37,7 +39,7 @@ import warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 def get_impacts(wdf, year, coi, filename, results_dir=Path("./results"), use_2020=True,
-                 bd_band_name="all", coc_band_name="median"):
+                 bd_band_name="all", coc_band_name="agri_potential_carbon"):
     # setup
     country_savefile_path = results_dir / str(year) / coi
     datPath = "./input_data"
@@ -213,9 +215,15 @@ def get_impacts(wdf, year, coi, filename, results_dir=Path("./results"), use_202
     wdf.drop(columns=["err"], inplace=True)
 
     # carbon opportunity cost (COC)
-    coc_path, coc_yr = fetch_coc_vals_path(year, datPath)
+    coc_path, coc_yr = fetch_coc_vals_path(year, datPath, use_2020)
     coc_opp_cost = pd.read_csv(coc_path)
+    available_coc_bands = coc_opp_cost.band_name.unique().tolist()
     coc_opp_cost = coc_opp_cost[coc_opp_cost.band_name==coc_band_name]
+    if len(coc_opp_cost) == 0:
+        # without this the empty selection propagates as NaN and silently lands as
+        # zero carbon opportunity cost in the aggregated outputs
+        sys.exit(f"""No rows for coc band '{coc_band_name}' in {coc_path}; """
+                 f"""available bands: {available_coc_bands}""")
 
     oc_crop_coc = coc_opp_cost[(coc_opp_cost.data_mean > 0)].copy()
     oc_crop_coc_pixels = oc_crop_coc.pixel_count.sum()
