@@ -41,7 +41,7 @@ from provenance._process_dat import main_global as process_dat_main_global
 from pandas import read_excel, read_csv
 
 # CONFIG
-RESULTS_DIR = "../results/mrio_pipeline_results_260826_spam2020" # set this to any dir of your choosing
+RESULTS_DIR = "../flmp_results/flmp_results_261009" # set this to any dir of your choosing
 ERROR_ITERATIONS = 1000
 # YEARS = list(range(2022, 2022))
 YEARS = [2021]
