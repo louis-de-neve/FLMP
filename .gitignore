@@ -1,4 +1,5 @@
 .vscode/*
+.venv
 .R(deprecated)/*
 processing/__pycache__/*
 plotting_functionalised/__pycache__/*
