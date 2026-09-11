@@ -81,20 +81,20 @@ df_2021 = pd.read_csv(f'../results/{2021}/{ISO}/impacts_aggregated.csv')
 # df_2010 = pd.read_csv(f'../results/{2010}/world_aggregate_impacts.csv')
 # df_2021 = pd.read_csv(f'../results/{2021}/world_aggregate_impacts.csv')
 
-for col in ["bd_opp_total", "Cons", "bd_opp_total_err"]:
+for col in ["life_extinctions_per_sp_total_calc", "consumed_tonnes", "life_extinctions_per_sp_total_calc_err"]:
     df_2010[col] = df_2010[col] / 6948574560 # TODO replace with country pop
     df_2021[col] = df_2021[col] / 7927332080 # TODO replace with country pop
 
-print(df_2010["bd_opp_total"].sum())
-print(df_2021["bd_opp_total"].sum())
+print(df_2010["life_extinctions_per_sp_total_calc"].sum())
+print(df_2021["life_extinctions_per_sp_total_calc"].sum())
 
-print(df_2010["Cons"].sum())
-print(df_2021["Cons"].sum())
+print(df_2010["consumed_tonnes"].sum())
+print(df_2021["consumed_tonnes"].sum())
 
 
 # Axes manipulation for scale
-total_2010 = df_2010["bd_opp_total"].sum()
-total_2021 = df_2021["bd_opp_total"].sum()
+total_2010 = df_2010["life_extinctions_per_sp_total_calc"].sum()
+total_2021 = df_2021["life_extinctions_per_sp_total_calc"].sum()
 
 if total_2010 > total_2021:
     axis_to_change = axs[0,1]
@@ -120,27 +120,27 @@ color_order = []
 
 # Top two axes: mosaics by group + item for 2010 and 2021
 for i, df in enumerate([df_2010, df_2021]):
-    if df["bd_opp_total"].sum() == larger_total:
+    if df["life_extinctions_per_sp_total_calc"].sum() == larger_total:
         pad = default_pad* new_length_ratio
     else:
         pad = default_pad
     xpad = pad
-    df = df[["Item", "Group", "bd_opp_total", "Cons"]]
-    df2 = df[["Group", "bd_opp_total", "Cons"]].copy()
+    df = df[["Item", "Group", "life_extinctions_per_sp_total_calc", "consumed_tonnes"]]
+    df2 = df[["Group", "life_extinctions_per_sp_total_calc", "consumed_tonnes"]].copy()
     df_grouped = df2.groupby("Group").sum().reset_index()
     df_grouped = df_grouped.merge(colors, on="Group", how="left")
     df_grouped = df_grouped.merge(colors2, on="Group", how="left")
     df_grouped = df_grouped.merge(order, on="Group", how="left")
     df_grouped = df_grouped.sort_values("Order")
 
-    total_bd_opp = df_grouped["bd_opp_total"].sum()
-    df_grouped["bd_opp_perc"] = df_grouped["bd_opp_total"] / total_bd_opp
+    total_bd_opp = df_grouped["life_extinctions_per_sp_total_calc"].sum()
+    df_grouped["bd_opp_perc"] = df_grouped["life_extinctions_per_sp_total_calc"] / total_bd_opp
     
     left = 0
     for _, row in df_grouped.iterrows():
         group_df = df[df["Group"] == row["Group"]].copy()
-        group_df = group_df.sort_values("bd_opp_total", ascending=False)
-        group_df["group_bd_opp_perc"] = group_df["bd_opp_total"] / group_df["bd_opp_total"].sum()
+        group_df = group_df.sort_values("life_extinctions_per_sp_total_calc", ascending=False)
+        group_df["group_bd_opp_perc"] = group_df["life_extinctions_per_sp_total_calc"] / group_df["life_extinctions_per_sp_total_calc"].sum()
 
 
         other_categories = group_df[group_df["Item"].str.contains("Other")]["Item"].tolist()
@@ -148,7 +148,7 @@ for i, df in enumerate([df_2010, df_2021]):
         if len(others) > 1:
             others_sum = others["group_bd_opp_perc"].sum()
             group_df = group_df[(group_df["group_bd_opp_perc"] >= other_condition*pad) & (~group_df["Item"].isin(other_categories))]
-            others_row = pd.DataFrame({"Item": [f"Others_{row["Group"]}"], "Group": [row["Group"]], "bd_opp_total": [0], "Cons": [0], "group_bd_opp_perc": [others_sum]})
+            others_row = pd.DataFrame({"Item": [f"Others_{row["Group"]}"], "Group": [row["Group"]], "life_extinctions_per_sp_total_calc": [0], "consumed_tonnes": [0], "group_bd_opp_perc": [others_sum]})
             group_df = pd.concat([group_df, others_row], ignore_index=True)
 
         cmap = LinearSegmentedColormap.from_list("custom_cmap", [row["Color"], row["Color2"]])
@@ -191,7 +191,7 @@ color_order.append("#c7fb9d")
 
 ax = axs[1,0]
 df = df_2010.copy()
-df = df.merge(df_2021[["Item", "bd_opp_total",  "bd_opp_total_err"]], on="Item", suffixes=("_2010", "_2021"))
+df = df.merge(df_2021[["Item", "life_extinctions_per_sp_total_calc",  "life_extinctions_per_sp_total_calc_err"]], on="Item", suffixes=("_2010", "_2021"))
 df["bd_opp_change"] = df["bd_opp_total_2021"] - df["bd_opp_total_2010"]
 df["bd_opp_perc_err"] = np.sqrt((df["bd_opp_total_err_2021"]/df["bd_opp_total_2021"])**2 + (df["bd_opp_total_err_2010"]/df["bd_opp_total_2010"])**2)
 
@@ -255,7 +255,7 @@ ax.set_title("Biodiversity footprint change from 2010 to 2021")
 # plot 4
 ax = axs[1,1]
 df = df_2010.copy()
-df = df.merge(df_2021[["Item", "Cons", "Cons_err", "bd_opp_total",  "bd_opp_total_err"]], on="Item", suffixes=("_2010", "_2021"))
+df = df.merge(df_2021[["Item", "consumed_tonnes", "consumed_tonnes_err", "life_extinctions_per_sp_total_calc",  "life_extinctions_per_sp_total_calc_err"]], on="Item", suffixes=("_2010", "_2021"))
 df["Cons_2010"] *= 1000
 df["Cons_err_2010"] *= 1000
 df["Cons_2021"] *= 1000

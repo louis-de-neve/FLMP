@@ -107,15 +107,15 @@ for country_iso in os.listdir(f"{results_dir}/{year}"):
     if len(country_iso) != 3 or not os.path.exists(f"{results_dir}/{year}/{country_iso}/df_{country_iso.lower()}.csv"):
         continue
     print(country_iso)
-    country_df = pd.read_csv(f"{results_dir}/{year}/{country_iso}/impacts_full.csv")[["Consumer_Country_Code", "Producer_Country_Code", "Animal_Product_Code", "ItemT_Code", "bd_opp_cost_calc", "provenance"]]
+    country_df = pd.read_csv(f"{results_dir}/{year}/{country_iso}/impacts_full.csv")[["Consumer_Country_Code", "Producer_Country_Code", "Animal_Product_Code", "ItemT_Code", "life_extinctions_per_sp_calc", "provenance_tonnes"]]
     
     country_df["Effective_Producer_Code"] = country_df["Consumer_Country_Code"]
     country_df.loc[country_df.Animal_Product_Code.isna(), "Effective_Producer_Code"] = country_df.loc[country_df.Animal_Product_Code.isna(), "Producer_Country_Code"]
     country_df.loc[country_df.Animal_Product_Code=="Primary", "Effective_Producer_Code"] = country_df.loc[country_df.Animal_Product_Code=="Primary", "Producer_Country_Code"]
     country_df["TotalProduction"] = 0.0
-    country_df.loc[country_df.Animal_Product_Code.isna(), "TotalProduction"] = country_df.loc[country_df.Animal_Product_Code.isna(), "provenance"]
-    country_df.loc[country_df.Animal_Product_Code=="Primary", "TotalProduction"] = country_df.loc[country_df.Animal_Product_Code=="Primary", "provenance"]
-    country_df = country_df[["ItemT_Code", "bd_opp_cost_calc", "TotalProduction", "Effective_Producer_Code"]]
+    country_df.loc[country_df.Animal_Product_Code.isna(), "TotalProduction"] = country_df.loc[country_df.Animal_Product_Code.isna(), "provenance_tonnes"]
+    country_df.loc[country_df.Animal_Product_Code=="Primary", "TotalProduction"] = country_df.loc[country_df.Animal_Product_Code=="Primary", "provenance_tonnes"]
+    country_df = country_df[["ItemT_Code", "life_extinctions_per_sp_calc", "TotalProduction", "Effective_Producer_Code"]]
 
 
     df = pd.concat([df, country_df], ignore_index=True)
@@ -127,8 +127,8 @@ df = df.groupby(["ItemT_Code", "Effective_Producer_Code"]).sum().reset_index()
 df = df.merge(commodity_crosswalk[["Item_Code", "group_name_v6"]], left_on="ItemT_Code", right_on=["Item_Code"], how="left")
 df = df.drop(columns=["ItemT_Code", "Item_Code"])
 # df = df.groupby(["group_name_v6", "Effective_Producer_Code"]).sum().reset_index()
-df["Impact_per_kg"] = df["bd_opp_cost_calc"] / (df["TotalProduction"]*1000)
-# df = df.drop(columns=["bd_opp_cost_calc"])
+df["Impact_per_kg"] = df["life_extinctions_per_sp_calc"] / (df["TotalProduction"]*1000)
+# df = df.drop(columns=["life_extinctions_per_sp_calc"])
 # print(df)
 
 import warnings

@@ -28,12 +28,12 @@ def load_commodity(commodity:str="Meat of cattle with the bone; fresh or chilled
         except FileNotFoundError:
             continue
 
-        cdf_2010 = cdf_2010[["Producer_Country_Code", "Consumer_Country_Code", "Item", "ItemT_Name", "bd_opp_cost_calc", "provenance", "bd_opp_cost_m2", "Pasture_avg_calc", "FAO_land_calc_m2", "Country_ISO"]]
-        cdf_2021 = cdf_2021[["Producer_Country_Code", "Consumer_Country_Code", "Item", "ItemT_Name", "bd_opp_cost_calc", "provenance", "bd_opp_cost_m2", "Pasture_avg_calc", "FAO_land_calc_m2", "Country_ISO"]]
-        feed_2010 = cdf_2010[(cdf_2010["ItemT_Name"]==commodity)&(cdf_2010["FAO_land_calc_m2"]!=0)].copy()
-        feed_2021 = cdf_2021[(cdf_2021["ItemT_Name"]==commodity)&(cdf_2021["FAO_land_calc_m2"]!=0)].copy()
-        past_2010 = cdf_2010[(cdf_2010["ItemT_Name"]==commodity)&(cdf_2010["FAO_land_calc_m2"]==0)].copy()
-        past_2021 = cdf_2021[(cdf_2021["ItemT_Name"]==commodity)&(cdf_2021["FAO_land_calc_m2"]==0)].copy()
+        cdf_2010 = cdf_2010[["Producer_Country_Code", "Consumer_Country_Code", "Item", "ItemT_Name", "life_extinctions_per_sp_calc", "provenance_tonnes", "life_extinctions_per_sp_per_m2", "pasture_area_m2_calc", "arable_area_m2_calc", "Country_ISO"]]
+        cdf_2021 = cdf_2021[["Producer_Country_Code", "Consumer_Country_Code", "Item", "ItemT_Name", "life_extinctions_per_sp_calc", "provenance_tonnes", "life_extinctions_per_sp_per_m2", "pasture_area_m2_calc", "arable_area_m2_calc", "Country_ISO"]]
+        feed_2010 = cdf_2010[(cdf_2010["ItemT_Name"]==commodity)&(cdf_2010["arable_area_m2_calc"]!=0)].copy()
+        feed_2021 = cdf_2021[(cdf_2021["ItemT_Name"]==commodity)&(cdf_2021["arable_area_m2_calc"]!=0)].copy()
+        past_2010 = cdf_2010[(cdf_2010["ItemT_Name"]==commodity)&(cdf_2010["arable_area_m2_calc"]==0)].copy()
+        past_2021 = cdf_2021[(cdf_2021["ItemT_Name"]==commodity)&(cdf_2021["arable_area_m2_calc"]==0)].copy()
 
         feed_df_2010 = pd.concat([feed_df_2010, feed_2010], ignore_index=True)
         feed_df_2021 = pd.concat([feed_df_2021, feed_2021], ignore_index=True)
@@ -70,19 +70,19 @@ def load_commodity_total(use_cache:bool=True):
             cdf_2021 = pd.read_csv(f'../results/{2021}/{country}/impacts_aggregated.csv')
         except FileNotFoundError:
             continue
-        cdf_2010["Area"] = cdf_2010["Pasture_m2"] + cdf_2010["Arable_m2"]
-        cdf_2021["Area"] = cdf_2021["Pasture_m2"] + cdf_2021["Arable_m2"]
-        cdf_2010 = cdf_2010[["Cons", "bd_opp_total", "Area"]]
-        cdf_2021 = cdf_2021[["Cons", "bd_opp_total", "Area"]]
+        cdf_2010["Area"] = cdf_2010["pasture_area_m2_calc"] + cdf_2010["arable_area_m2_calc"]
+        cdf_2021["Area"] = cdf_2021["pasture_area_m2_calc"] + cdf_2021["arable_area_m2_calc"]
+        cdf_2010 = cdf_2010[["consumed_tonnes", "life_extinctions_per_sp_total_calc", "Area"]]
+        cdf_2021 = cdf_2021[["consumed_tonnes", "life_extinctions_per_sp_total_calc", "Area"]]
         cdf_2010 = cdf_2010.sum().to_frame().T
         cdf_2021 = cdf_2021.sum().to_frame().T
         cdf_2010["ISO"] = country
         cdf_2021["ISO"] = country
 
-        cdf_2010["E_per_kg"] = cdf_2010["bd_opp_total"] / (cdf_2010["Cons"]*1000)
-        cdf_2021["E_per_kg"] = cdf_2021["bd_opp_total"] / (cdf_2021["Cons"]*1000)
-        cdf_2010["Production_kg"] = cdf_2010["Cons"]*1000
-        cdf_2021["Production_kg"] = cdf_2021["Cons"]*1000
+        cdf_2010["E_per_kg"] = cdf_2010["life_extinctions_per_sp_total_calc"] / (cdf_2010["consumed_tonnes"]*1000)
+        cdf_2021["E_per_kg"] = cdf_2021["life_extinctions_per_sp_total_calc"] / (cdf_2021["consumed_tonnes"]*1000)
+        cdf_2010["Production_kg"] = cdf_2010["consumed_tonnes"]*1000
+        cdf_2021["Production_kg"] = cdf_2021["consumed_tonnes"]*1000
 
         df_2010 = pd.concat([df_2010, cdf_2010], ignore_index=True)
         df_2021 = pd.concat([df_2021, cdf_2021], ignore_index=True)

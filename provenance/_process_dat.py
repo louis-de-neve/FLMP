@@ -33,23 +33,21 @@ def main(year, coi_iso, bh, bf, results_dir=Path("./results"), amortization_year
     # print(bf)
     bh = bh.copy()
     bf = bf.copy()
-    bf["bd_opp_cost_calc"] = bf["bd_opp_cost_calc"].mask(bf["bd_opp_cost_calc"].lt(0),0)
-    bf["coc_opp_cost_calc"] = bf["coc_opp_cost_calc"].mask(bf["coc_opp_cost_calc"].lt(0),0)
+    bf["life_extinctions_per_sp_calc"] = bf["life_extinctions_per_sp_calc"].mask(bf["life_extinctions_per_sp_calc"].lt(0),0)
+    bf["ghg_coc_kgco2e_calc"] = bf["ghg_coc_kgco2e_calc"].mask(bf["ghg_coc_kgco2e_calc"].lt(0),0)
 
-    bh = bh[np.logical_not(np.isinf(bh.FAO_land_calc_m2))]
+    bh = bh[np.logical_not(np.isinf(bh.arable_area_m2_calc))]
     bh["ItemT_Name"] = bh["Item"]
     bh["ItemT_Code"] = bh["Item_Code"]
-    bh["Arable_m2"] = bh.FAO_land_calc_m2
-    bh["Pasture_m2"] = bh.Pasture_avg_calc.fillna(0)
-    bh["bd_perc_err"] = bh["bd_opp_cost_calc_err"] / bh["bd_opp_cost_calc"]
+    bh["pasture_area_m2_calc"] = bh.pasture_area_m2_calc.fillna(0)
+    bh["life_extinctions_relerr_frac"] = bh["life_extinctions_per_sp_calc_err"] / bh["life_extinctions_per_sp_calc"]
 
-    bf = bf[np.logical_not(np.isinf(bf.FAO_land_calc_m2))]
+    bf = bf[np.logical_not(np.isinf(bf.arable_area_m2_calc))]
     bf["ItemT_Code"] = bf["Animal_Product_Code"]
     bf["ItemT_Name"] = bf["Animal_Product"]
-    bf["Arable_m2"] = bf.FAO_land_calc_m2
-    bf["Pasture_m2"] = 0
-    bf["bd_perc_err"] = bf["bd_opp_cost_calc_err"] / bf["bd_opp_cost_calc"]
-    bf = bf[~np.isinf(bf.bd_perc_err)]
+    bf["pasture_area_m2_calc"] = 0
+    bf["life_extinctions_relerr_frac"] = bf["life_extinctions_per_sp_calc_err"] / bf["life_extinctions_per_sp_calc"]
+    bf = bf[~np.isinf(bf.life_extinctions_relerr_frac)]
     xdf = pd.concat([bh,bf])
 
 
@@ -58,8 +56,8 @@ def main(year, coi_iso, bh, bf, results_dir=Path("./results"), amortization_year
 
     xdfs_uk = xdf[xdf.Producer_Country_Code == coi]
     xdfs_os = xdf[~(xdf.Producer_Country_Code == coi)]
-    xdfs_uk = xdfs_uk[["Pasture_m2", "Arable_m2", "SWWU_avg_calc", "ItemT_Name", "ItemT_Code", "provenance"]]
-    xdfs_os = xdfs_os[["Pasture_m2", "Arable_m2", "SWWU_avg_calc", "ItemT_Name", "ItemT_Code", "provenance"]]
+    xdfs_uk = xdfs_uk[["pasture_area_m2_calc", "arable_area_m2_calc", "ItemT_Name", "ItemT_Code", "provenance_tonnes"]]
+    xdfs_os = xdfs_os[["pasture_area_m2_calc", "arable_area_m2_calc", "ItemT_Name", "ItemT_Code", "provenance_tonnes"]]
     
     
     xdfs_uk = xdfs_uk.groupby("ItemT_Name").sum()
@@ -73,40 +71,39 @@ def main(year, coi_iso, bh, bf, results_dir=Path("./results"), amortization_year
         try:
             item_code = lookup[lookup.ItemT_Name == item].ItemT_Code.values[0]
             df_uk.loc[item, "Group"] = commodity_crosswalk[commodity_crosswalk.Item_Code == item_code][grouping].values[0]
-            df_uk.loc[item, "tonnage"] = x.provenance
-            df_uk.loc[item, "Pasture_m2"] = x.Pasture_m2
-            df_uk.loc[item, "Arable_m2"] = x.Arable_m2
-            df_uk.loc[item, "Scarcity_weighted_water_l"] = x.SWWU_avg_calc.sum()
-            df_uk.loc[item, "ghg_food"] = bh[(bh.Item == item)&(bh.Producer_Country_Code == coi)].GHG_avg_calc.sum()
-            df_uk.loc[item, "ghg_feed"] = bf[(bf.Animal_Product == item)&(bf.Producer_Country_Code == coi)].GHG_avg_calc.sum()
-            df_uk.loc[item, "ghg_total"] =  df_uk.loc[item, "ghg_feed"] + df_uk.loc[item, "ghg_food"]
-            df_uk.loc[item, "bd_opp_food"] = bh[(bh.Item == item)&(bh.Producer_Country_Code == coi)]["bd_opp_cost_calc"].sum()
-            df_uk.loc[item, "bd_opp_feed"] = bf[(bf.Animal_Product == item)&(bf.Producer_Country_Code == coi)]["bd_opp_cost_calc"].sum()
-            df_uk.loc[item, "bd_opp_total"] = df_uk.loc[item, "bd_opp_feed"] + df_uk.loc[item, "bd_opp_food"]
-            df_uk.loc[item, "coc_opp_food"] = bh[(bh.Item == item)&(bh.Producer_Country_Code == coi)]["coc_opp_cost_calc"].sum()
-            df_uk.loc[item, "coc_opp_feed"] = bf[(bf.Animal_Product == item)&(bf.Producer_Country_Code == coi)]["coc_opp_cost_calc"].sum()
-            df_uk.loc[item, "coc_opp_total"] = df_uk.loc[item, "coc_opp_feed"] + df_uk.loc[item, "coc_opp_food"]
+            df_uk.loc[item, "throughput_tonnes"] = x.provenance_tonnes
+            df_uk.loc[item, "pasture_area_m2_calc"] = x.pasture_area_m2_calc
+            df_uk.loc[item, "arable_area_m2_calc"] = x.arable_area_m2_calc
+            df_uk.loc[item, "ghg_prod_food_kgco2e_calc"] = bh[(bh.Item == item)&(bh.Producer_Country_Code == coi)].ghg_prod_kgco2e_calc.sum()
+            df_uk.loc[item, "ghg_prod_feed_kgco2e_calc"] = bf[(bf.Animal_Product == item)&(bf.Producer_Country_Code == coi)].ghg_prod_kgco2e_calc.sum()
+            df_uk.loc[item, "ghg_prod_total_kgco2e_calc"] =  df_uk.loc[item, "ghg_prod_feed_kgco2e_calc"] + df_uk.loc[item, "ghg_prod_food_kgco2e_calc"]
+            df_uk.loc[item, "life_extinctions_per_sp_food_calc"] = bh[(bh.Item == item)&(bh.Producer_Country_Code == coi)]["life_extinctions_per_sp_calc"].sum()
+            df_uk.loc[item, "life_extinctions_per_sp_feed_calc"] = bf[(bf.Animal_Product == item)&(bf.Producer_Country_Code == coi)]["life_extinctions_per_sp_calc"].sum()
+            df_uk.loc[item, "life_extinctions_per_sp_total_calc"] = df_uk.loc[item, "life_extinctions_per_sp_feed_calc"] + df_uk.loc[item, "life_extinctions_per_sp_food_calc"]
+            df_uk.loc[item, "ghg_coc_food_kgco2e_calc"] = bh[(bh.Item == item)&(bh.Producer_Country_Code == coi)]["ghg_coc_kgco2e_calc"].sum()
+            df_uk.loc[item, "ghg_coc_feed_kgco2e_calc"] = bf[(bf.Animal_Product == item)&(bf.Producer_Country_Code == coi)]["ghg_coc_kgco2e_calc"].sum()
+            df_uk.loc[item, "ghg_coc_total_kgco2e_calc"] = df_uk.loc[item, "ghg_coc_feed_kgco2e_calc"] + df_uk.loc[item, "ghg_coc_food_kgco2e_calc"]
 
             # bd opp food err
-            df_uk.loc[item, "bd_opp_food_err"] = bh[(bh.Item==item)&(bh.Producer_Country_Code==coi)].bd_opp_cost_calc_err.sum()
+            df_uk.loc[item, "life_extinctions_per_sp_food_calc_err"] = bh[(bh.Item==item)&(bh.Producer_Country_Code==coi)].life_extinctions_per_sp_calc_err.sum()
 
-            df_uk.loc[item, "bd_opp_feed_err"] = bf[(bf.Animal_Product==item)&(bf.Producer_Country_Code==coi)].bd_opp_cost_calc_err.sum()
+            df_uk.loc[item, "life_extinctions_per_sp_feed_calc_err"] = bf[(bf.Animal_Product==item)&(bf.Producer_Country_Code==coi)].life_extinctions_per_sp_calc_err.sum()
 
             # bd opp total error
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
-                fe_err = df_uk.loc[item, "bd_opp_feed_err"]/df_uk.loc[item, "bd_opp_feed"]
-                fo_err = df_uk.loc[item, "bd_opp_food_err"]/df_uk.loc[item, "bd_opp_food"]
+                fe_err = df_uk.loc[item, "life_extinctions_per_sp_feed_calc_err"]/df_uk.loc[item, "life_extinctions_per_sp_feed_calc"]
+                fo_err = df_uk.loc[item, "life_extinctions_per_sp_food_calc_err"]/df_uk.loc[item, "life_extinctions_per_sp_food_calc"]
 
-            df_uk.loc[item, "bd_opp_total_err"] = df_uk.loc[item, "bd_opp_feed_err"] + df_uk.loc[item, "bd_opp_food_err"]
+            df_uk.loc[item, "life_extinctions_per_sp_total_calc_err"] = df_uk.loc[item, "life_extinctions_per_sp_feed_calc_err"] + df_uk.loc[item, "life_extinctions_per_sp_food_calc_err"]
 
             # coc opp food/feed/total err
-            df_uk.loc[item, "coc_opp_food_err"] = bh[(bh.Item==item)&(bh.Producer_Country_Code==coi)].coc_opp_cost_calc_err.sum()
-            df_uk.loc[item, "coc_opp_feed_err"] = bf[(bf.Animal_Product==item)&(bf.Producer_Country_Code==coi)].coc_opp_cost_calc_err.sum()
-            df_uk.loc[item, "coc_opp_total_err"] = df_uk.loc[item, "coc_opp_feed_err"] + df_uk.loc[item, "coc_opp_food_err"]
+            df_uk.loc[item, "ghg_coc_food_kgco2e_calc_err"] = bh[(bh.Item==item)&(bh.Producer_Country_Code==coi)].ghg_coc_kgco2e_calc_err.sum()
+            df_uk.loc[item, "ghg_coc_feed_kgco2e_calc_err"] = bf[(bf.Animal_Product==item)&(bf.Producer_Country_Code==coi)].ghg_coc_kgco2e_calc_err.sum()
+            df_uk.loc[item, "ghg_coc_total_kgco2e_calc_err"] = df_uk.loc[item, "ghg_coc_feed_kgco2e_calc_err"] + df_uk.loc[item, "ghg_coc_food_kgco2e_calc_err"]
 
-            df_uk.loc[item, "Cons"] = bh[(bh.Item == item)&(bh.Producer_Country_Code == coi)].provenance.sum()
-            df_uk.loc[item, "Cons_err"] = bh[(bh.Item == item)&(bh.Producer_Country_Code == coi)].provenance_err.sum()
+            df_uk.loc[item, "consumed_tonnes"] = bh[(bh.Item == item)&(bh.Producer_Country_Code == coi)].provenance_tonnes.sum()
+            df_uk.loc[item, "consumed_tonnes_err"] = bh[(bh.Item == item)&(bh.Producer_Country_Code == coi)].provenance_tonnes_err.sum()
 
         except IndexError:
             item_code = lookup[lookup.ItemT_Name == item].ItemT_Code.values[0]
@@ -118,40 +115,39 @@ def main(year, coi_iso, bh, bf, results_dir=Path("./results"), amortization_year
         try:
             item_code = lookup[lookup.ItemT_Name == item].ItemT_Code.values[0]
             df_os.loc[item, "Group"] = commodity_crosswalk[commodity_crosswalk.Item_Code == item_code][grouping].values[0]
-            df_os.loc[item, "tonnage"] = x.provenance
-            df_os.loc[item, "Pasture_m2"] = x.Pasture_m2
-            df_os.loc[item, "Arable_m2"] = x.Arable_m2
-            df_os.loc[item, "Scarcity_weighted_water_l"] = x.SWWU_avg_calc.sum()
-            df_os.loc[item, "ghg_food"] = bh[(bh.Item == item)&(bh.Producer_Country_Code != coi)].GHG_avg_calc.sum()
-            df_os.loc[item, "ghg_feed"] = bf[(bf.Animal_Product == item)&(bf.Producer_Country_Code != coi)].GHG_avg_calc.sum()
-            df_os.loc[item, "ghg_total"] =  df_os.loc[item, "ghg_feed"] + df_os.loc[item, "ghg_food"]
-            df_os.loc[item, "bd_opp_food"] = bh[(bh.Item == item)&(bh.Producer_Country_Code != coi)]["bd_opp_cost_calc"].sum()
-            df_os.loc[item, "bd_opp_feed"] = bf[(bf.Animal_Product == item)&(bf.Producer_Country_Code != coi)]["bd_opp_cost_calc"].sum()
-            df_os.loc[item, "bd_opp_total"] = df_os.loc[item, "bd_opp_feed"] + df_os.loc[item, "bd_opp_food"]
-            df_os.loc[item, "coc_opp_food"] = bh[(bh.Item == item)&(bh.Producer_Country_Code != coi)]["coc_opp_cost_calc"].sum()
-            df_os.loc[item, "coc_opp_feed"] = bf[(bf.Animal_Product == item)&(bf.Producer_Country_Code != coi)]["coc_opp_cost_calc"].sum()
-            df_os.loc[item, "coc_opp_total"] = df_os.loc[item, "coc_opp_feed"] + df_os.loc[item, "coc_opp_food"]
+            df_os.loc[item, "throughput_tonnes"] = x.provenance_tonnes
+            df_os.loc[item, "pasture_area_m2_calc"] = x.pasture_area_m2_calc
+            df_os.loc[item, "arable_area_m2_calc"] = x.arable_area_m2_calc
+            df_os.loc[item, "ghg_prod_food_kgco2e_calc"] = bh[(bh.Item == item)&(bh.Producer_Country_Code != coi)].ghg_prod_kgco2e_calc.sum()
+            df_os.loc[item, "ghg_prod_feed_kgco2e_calc"] = bf[(bf.Animal_Product == item)&(bf.Producer_Country_Code != coi)].ghg_prod_kgco2e_calc.sum()
+            df_os.loc[item, "ghg_prod_total_kgco2e_calc"] =  df_os.loc[item, "ghg_prod_feed_kgco2e_calc"] + df_os.loc[item, "ghg_prod_food_kgco2e_calc"]
+            df_os.loc[item, "life_extinctions_per_sp_food_calc"] = bh[(bh.Item == item)&(bh.Producer_Country_Code != coi)]["life_extinctions_per_sp_calc"].sum()
+            df_os.loc[item, "life_extinctions_per_sp_feed_calc"] = bf[(bf.Animal_Product == item)&(bf.Producer_Country_Code != coi)]["life_extinctions_per_sp_calc"].sum()
+            df_os.loc[item, "life_extinctions_per_sp_total_calc"] = df_os.loc[item, "life_extinctions_per_sp_feed_calc"] + df_os.loc[item, "life_extinctions_per_sp_food_calc"]
+            df_os.loc[item, "ghg_coc_food_kgco2e_calc"] = bh[(bh.Item == item)&(bh.Producer_Country_Code != coi)]["ghg_coc_kgco2e_calc"].sum()
+            df_os.loc[item, "ghg_coc_feed_kgco2e_calc"] = bf[(bf.Animal_Product == item)&(bf.Producer_Country_Code != coi)]["ghg_coc_kgco2e_calc"].sum()
+            df_os.loc[item, "ghg_coc_total_kgco2e_calc"] = df_os.loc[item, "ghg_coc_feed_kgco2e_calc"] + df_os.loc[item, "ghg_coc_food_kgco2e_calc"]
             # if item not in df_uk.index:
-            df_os.loc[item, "Cons"] = bh[(bh.Item == item)&(bh.Producer_Country_Code !=coi)].provenance.sum()
-            df_os.loc[item, "Cons_err"] = np.sqrt(np.nansum(bh[(bh.Item == item)&(bh.Producer_Country_Code !=coi)].provenance_err ** 2))
+            df_os.loc[item, "consumed_tonnes"] = bh[(bh.Item == item)&(bh.Producer_Country_Code !=coi)].provenance_tonnes.sum()
+            df_os.loc[item, "consumed_tonnes_err"] = np.sqrt(np.nansum(bh[(bh.Item == item)&(bh.Producer_Country_Code !=coi)].provenance_tonnes_err ** 2))
 
             # bd opp food err
-            df_os.loc[item, "bd_opp_food_err"] = bh[(bh.Item==item)&(bh.Producer_Country_Code!=coi)].bd_opp_cost_calc_err.sum()
+            df_os.loc[item, "life_extinctions_per_sp_food_calc_err"] = bh[(bh.Item==item)&(bh.Producer_Country_Code!=coi)].life_extinctions_per_sp_calc_err.sum()
 
             # bd opp feed err
-            df_os.loc[item, "bd_opp_feed_err"] = bf[(bf.Animal_Product==item)&(bf.Producer_Country_Code!=coi)].bd_opp_cost_calc_err.sum()
+            df_os.loc[item, "life_extinctions_per_sp_feed_calc_err"] = bf[(bf.Animal_Product==item)&(bf.Producer_Country_Code!=coi)].life_extinctions_per_sp_calc_err.sum()
             # bd opp total error
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
-                fe_err = df_os.loc[item, "bd_opp_feed_err"]/df_os.loc[item, "bd_opp_feed"]
-                fo_err = df_os.loc[item, "bd_opp_food_err"]/df_os.loc[item, "bd_opp_food"]
+                fe_err = df_os.loc[item, "life_extinctions_per_sp_feed_calc_err"]/df_os.loc[item, "life_extinctions_per_sp_feed_calc"]
+                fo_err = df_os.loc[item, "life_extinctions_per_sp_food_calc_err"]/df_os.loc[item, "life_extinctions_per_sp_food_calc"]
 
-            df_os.loc[item, "bd_opp_total_err"] = df_os.loc[item, "bd_opp_feed_err"] + df_os.loc[item, "bd_opp_food_err"]
+            df_os.loc[item, "life_extinctions_per_sp_total_calc_err"] = df_os.loc[item, "life_extinctions_per_sp_feed_calc_err"] + df_os.loc[item, "life_extinctions_per_sp_food_calc_err"]
 
             # coc opp food/feed/total err
-            df_os.loc[item, "coc_opp_food_err"] = bh[(bh.Item==item)&(bh.Producer_Country_Code!=coi)].coc_opp_cost_calc_err.sum()
-            df_os.loc[item, "coc_opp_feed_err"] = bf[(bf.Animal_Product==item)&(bf.Producer_Country_Code!=coi)].coc_opp_cost_calc_err.sum()
-            df_os.loc[item, "coc_opp_total_err"] = df_os.loc[item, "coc_opp_feed_err"] + df_os.loc[item, "coc_opp_food_err"]
+            df_os.loc[item, "ghg_coc_food_kgco2e_calc_err"] = bh[(bh.Item==item)&(bh.Producer_Country_Code!=coi)].ghg_coc_kgco2e_calc_err.sum()
+            df_os.loc[item, "ghg_coc_feed_kgco2e_calc_err"] = bf[(bf.Animal_Product==item)&(bf.Producer_Country_Code!=coi)].ghg_coc_kgco2e_calc_err.sum()
+            df_os.loc[item, "ghg_coc_total_kgco2e_calc_err"] = df_os.loc[item, "ghg_coc_feed_kgco2e_calc_err"] + df_os.loc[item, "ghg_coc_food_kgco2e_calc_err"]
 
         except IndexError:
             item_code = lookup[lookup.ItemT_Name == item].ItemT_Code.values[0]
@@ -178,22 +174,21 @@ def main(year, coi_iso, bh, bf, results_dir=Path("./results"), amortization_year
         kdf.columns = [_ if _ != "level_0" else "Item" for _ in kdf.columns]
     
     for item in kdf.Item.unique():
-        kdf.loc[kdf.Item==item, "primary_tonnage"] = xdf[(xdf.Item==item)&(xdf.ItemT_Name.isin([item, "Primary"]))].provenance.sum()
+        kdf.loc[kdf.Item==item, "primary_tonnes"] = xdf[(xdf.Item==item)&(xdf.ItemT_Name.isin([item, "Primary"]))].provenance_tonnes.sum()
         
     kdf.to_csv(f"{scenPath}/impacts_aggregated.csv")
     agg_impact_path = results_dir / "impacts" / str(year) / f"impacts_aggregated_{coi_iso}.csv"
     os.makedirs(agg_impact_path.parent, exist_ok=True)
     kdf.to_csv(agg_impact_path, index=False)
 
-    food_commodity_impacts = kdf[["Item", "primary_tonnage", "ghg_total", "bd_opp_total", "bd_opp_total_err", "coc_opp_total", "coc_opp_total_err", "Scarcity_weighted_water_l"]].copy()
-    food_commodity_impacts["kgCO2_per_kg"] = food_commodity_impacts.ghg_total / (food_commodity_impacts.primary_tonnage * 1000)
-    food_commodity_impacts["exp_extinctions_per_kg"] = food_commodity_impacts.bd_opp_total / (food_commodity_impacts.primary_tonnage * 1000)
-    food_commodity_impacts["exp_extinctions_err_per_kg"] = food_commodity_impacts.bd_opp_total_err / (food_commodity_impacts.primary_tonnage * 1000)
-    food_commodity_impacts["annual_coc_opp_cost_per_kg"] = (food_commodity_impacts.coc_opp_total / amortization_years) / (food_commodity_impacts.primary_tonnage * 1000)
-    food_commodity_impacts["annual_coc_opp_cost_err_per_kg"] = (food_commodity_impacts.coc_opp_total_err / amortization_years) / (food_commodity_impacts.primary_tonnage * 1000)
-    food_commodity_impacts["scarcity_weighted_water_use_litres_per_kg"] = food_commodity_impacts.Scarcity_weighted_water_l / (food_commodity_impacts.primary_tonnage * 1000)
+    food_commodity_impacts = kdf[["Item", "primary_tonnes", "ghg_prod_total_kgco2e_calc", "life_extinctions_per_sp_total_calc", "life_extinctions_per_sp_total_calc_err", "ghg_coc_total_kgco2e_calc", "ghg_coc_total_kgco2e_calc_err"]].copy()
+    food_commodity_impacts["ghg_prod_kgco2e_per_kg"] = food_commodity_impacts.ghg_prod_total_kgco2e_calc / (food_commodity_impacts.primary_tonnes * 1000)
+    food_commodity_impacts["life_extinctions_per_sp_per_kg"] = food_commodity_impacts.life_extinctions_per_sp_total_calc / (food_commodity_impacts.primary_tonnes * 1000)
+    food_commodity_impacts["life_extinctions_per_sp_per_kg_err"] = food_commodity_impacts.life_extinctions_per_sp_total_calc_err / (food_commodity_impacts.primary_tonnes * 1000)
+    food_commodity_impacts["ghg_coc_kgco2e_per_kg_per_year"] = (food_commodity_impacts.ghg_coc_total_kgco2e_calc / amortization_years) / (food_commodity_impacts.primary_tonnes * 1000)
+    food_commodity_impacts["ghg_coc_kgco2e_per_kg_per_year_err"] = (food_commodity_impacts.ghg_coc_total_kgco2e_calc_err / amortization_years) / (food_commodity_impacts.primary_tonnes * 1000)
 
-    food_commodity_impacts = food_commodity_impacts.drop(columns=["ghg_total", "bd_opp_total", "coc_opp_total", "Scarcity_weighted_water_l"])
+    food_commodity_impacts = food_commodity_impacts.drop(columns=["ghg_prod_total_kgco2e_calc", "life_extinctions_per_sp_total_calc", "life_extinctions_per_sp_total_calc_err", "ghg_coc_total_kgco2e_calc", "ghg_coc_total_kgco2e_calc_err"])
     last_row = food_commodity_impacts.iloc[-1].copy()
     last_row.iloc[1:] = 0
     last_row.iloc[0] = "Zero"
@@ -202,7 +197,7 @@ def main(year, coi_iso, bh, bf, results_dir=Path("./results"), amortization_year
     old_to_new = pd.read_csv(f"{datPath}/composition_old_vs_new.csv")
     old_to_new = old_to_new.merge(food_commodity_impacts, left_on="New", right_on="Item", how="left")
     old_to_new.drop(columns=["Item", "New"], inplace=True)
-    old_to_new.rename(columns={"Old":""}, inplace=True)
+    old_to_new.rename(columns={"Old":"Item"}, inplace=True)
     old_to_new.to_csv(f"{scenPath}/food_commodity_impacts.csv", index=False)
 
     return missing_items
@@ -223,23 +218,21 @@ def main_global(year, coi_iso, bh, bf, results_dir=Path("./results"), amortizati
     # print(bf)
     bh = bh.copy()
     bf = bf.copy()
-    bf["bd_opp_cost_calc"] = bf["bd_opp_cost_calc"].mask(bf["bd_opp_cost_calc"].lt(0),0)
-    bf["coc_opp_cost_calc"] = bf["coc_opp_cost_calc"].mask(bf["coc_opp_cost_calc"].lt(0),0)
+    bf["life_extinctions_per_sp_calc"] = bf["life_extinctions_per_sp_calc"].mask(bf["life_extinctions_per_sp_calc"].lt(0),0)
+    bf["ghg_coc_kgco2e_calc"] = bf["ghg_coc_kgco2e_calc"].mask(bf["ghg_coc_kgco2e_calc"].lt(0),0)
 
-    bh = bh[np.logical_not(np.isinf(bh.FAO_land_calc_m2))]
+    bh = bh[np.logical_not(np.isinf(bh.arable_area_m2_calc))]
     bh["ItemT_Name"] = bh["Item"]
     bh["ItemT_Code"] = bh["Item_Code"]
-    bh["Arable_m2"] = bh.FAO_land_calc_m2
-    bh["Pasture_m2"] = bh.Pasture_avg_calc.fillna(0)
-    bh["bd_perc_err"] = bh["bd_opp_cost_calc_err"] / bh["bd_opp_cost_calc"]
+    bh["pasture_area_m2_calc"] = bh.pasture_area_m2_calc.fillna(0)
+    bh["life_extinctions_relerr_frac"] = bh["life_extinctions_per_sp_calc_err"] / bh["life_extinctions_per_sp_calc"]
 
-    bf = bf[np.logical_not(np.isinf(bf.FAO_land_calc_m2))]
+    bf = bf[np.logical_not(np.isinf(bf.arable_area_m2_calc))]
     bf["ItemT_Code"] = bf["Animal_Product_Code"]
     bf["ItemT_Name"] = bf["Animal_Product"]
-    bf["Arable_m2"] = bf.FAO_land_calc_m2
-    bf["Pasture_m2"] = 0
-    bf["bd_perc_err"] = bf["bd_opp_cost_calc_err"] / bf["bd_opp_cost_calc"]
-    bf = bf[~np.isinf(bf.bd_perc_err)]
+    bf["pasture_area_m2_calc"] = 0
+    bf["life_extinctions_relerr_frac"] = bf["life_extinctions_per_sp_calc_err"] / bf["life_extinctions_per_sp_calc"]
+    bf = bf[~np.isinf(bf.life_extinctions_relerr_frac)]
     xdf = pd.concat([bh,bf])
 
 
@@ -247,7 +240,7 @@ def main_global(year, coi_iso, bh, bf, results_dir=Path("./results"), amortizati
 
 
     xdfs_uk = xdf.copy()
-    xdfs_uk = xdfs_uk[["Pasture_m2", "Arable_m2", "SWWU_avg_calc", "ItemT_Name", "ItemT_Code", "provenance"]]
+    xdfs_uk = xdfs_uk[["pasture_area_m2_calc", "arable_area_m2_calc", "ItemT_Name", "ItemT_Code", "provenance_tonnes"]]
     
     
     xdfs_uk = xdfs_uk.groupby("ItemT_Name").sum()
@@ -260,40 +253,39 @@ def main_global(year, coi_iso, bh, bf, results_dir=Path("./results"), amortizati
         try:
             item_code = lookup[lookup.ItemT_Name == item].ItemT_Code.values[0]
             df_uk.loc[item, "Group"] = commodity_crosswalk[commodity_crosswalk.Item_Code == item_code][grouping].values[0]
-            df_uk.loc[item, "tonnage"] = x.provenance
-            df_uk.loc[item, "Pasture_m2"] = x.Pasture_m2
-            df_uk.loc[item, "Arable_m2"] = x.Arable_m2
-            df_uk.loc[item, "Scarcity_weighted_water_l"] = x.SWWU_avg_calc.sum()
-            df_uk.loc[item, "ghg_food"] = bh[(bh.Item == item)].GHG_avg_calc.sum()
-            df_uk.loc[item, "ghg_feed"] = bf[(bf.Animal_Product == item)].GHG_avg_calc.sum()
-            df_uk.loc[item, "ghg_total"] =  df_uk.loc[item, "ghg_feed"] + df_uk.loc[item, "ghg_food"]
-            df_uk.loc[item, "bd_opp_food"] = bh[(bh.Item == item)]["bd_opp_cost_calc"].sum()
-            df_uk.loc[item, "bd_opp_feed"] = bf[(bf.Animal_Product == item)]["bd_opp_cost_calc"].sum()
-            df_uk.loc[item, "bd_opp_total"] = df_uk.loc[item, "bd_opp_feed"] + df_uk.loc[item, "bd_opp_food"]
-            df_uk.loc[item, "coc_opp_food"] = bh[(bh.Item == item)]["coc_opp_cost_calc"].sum()
-            df_uk.loc[item, "coc_opp_feed"] = bf[(bf.Animal_Product == item)]["coc_opp_cost_calc"].sum()
-            df_uk.loc[item, "coc_opp_total"] = df_uk.loc[item, "coc_opp_feed"] + df_uk.loc[item, "coc_opp_food"]
+            df_uk.loc[item, "throughput_tonnes"] = x.provenance_tonnes
+            df_uk.loc[item, "pasture_area_m2_calc"] = x.pasture_area_m2_calc
+            df_uk.loc[item, "arable_area_m2_calc"] = x.arable_area_m2_calc
+            df_uk.loc[item, "ghg_prod_food_kgco2e_calc"] = bh[(bh.Item == item)].ghg_prod_kgco2e_calc.sum()
+            df_uk.loc[item, "ghg_prod_feed_kgco2e_calc"] = bf[(bf.Animal_Product == item)].ghg_prod_kgco2e_calc.sum()
+            df_uk.loc[item, "ghg_prod_total_kgco2e_calc"] =  df_uk.loc[item, "ghg_prod_feed_kgco2e_calc"] + df_uk.loc[item, "ghg_prod_food_kgco2e_calc"]
+            df_uk.loc[item, "life_extinctions_per_sp_food_calc"] = bh[(bh.Item == item)]["life_extinctions_per_sp_calc"].sum()
+            df_uk.loc[item, "life_extinctions_per_sp_feed_calc"] = bf[(bf.Animal_Product == item)]["life_extinctions_per_sp_calc"].sum()
+            df_uk.loc[item, "life_extinctions_per_sp_total_calc"] = df_uk.loc[item, "life_extinctions_per_sp_feed_calc"] + df_uk.loc[item, "life_extinctions_per_sp_food_calc"]
+            df_uk.loc[item, "ghg_coc_food_kgco2e_calc"] = bh[(bh.Item == item)]["ghg_coc_kgco2e_calc"].sum()
+            df_uk.loc[item, "ghg_coc_feed_kgco2e_calc"] = bf[(bf.Animal_Product == item)]["ghg_coc_kgco2e_calc"].sum()
+            df_uk.loc[item, "ghg_coc_total_kgco2e_calc"] = df_uk.loc[item, "ghg_coc_feed_kgco2e_calc"] + df_uk.loc[item, "ghg_coc_food_kgco2e_calc"]
 
             # bd opp food err
-            df_uk.loc[item, "bd_opp_food_err"] = bh[(bh.Item==item)].bd_opp_cost_calc_err.sum()
+            df_uk.loc[item, "life_extinctions_per_sp_food_calc_err"] = bh[(bh.Item==item)].life_extinctions_per_sp_calc_err.sum()
 
-            df_uk.loc[item, "bd_opp_feed_err"] = bf[(bf.Animal_Product==item)].bd_opp_cost_calc_err.sum()
+            df_uk.loc[item, "life_extinctions_per_sp_feed_calc_err"] = bf[(bf.Animal_Product==item)].life_extinctions_per_sp_calc_err.sum()
 
             # bd opp total error
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
-                fe_err = df_uk.loc[item, "bd_opp_feed_err"]/df_uk.loc[item, "bd_opp_feed"]
-                fo_err = df_uk.loc[item, "bd_opp_food_err"]/df_uk.loc[item, "bd_opp_food"]
+                fe_err = df_uk.loc[item, "life_extinctions_per_sp_feed_calc_err"]/df_uk.loc[item, "life_extinctions_per_sp_feed_calc"]
+                fo_err = df_uk.loc[item, "life_extinctions_per_sp_food_calc_err"]/df_uk.loc[item, "life_extinctions_per_sp_food_calc"]
 
-            df_uk.loc[item, "bd_opp_total_err"] = df_uk.loc[item, "bd_opp_feed_err"] + df_uk.loc[item, "bd_opp_food_err"]
+            df_uk.loc[item, "life_extinctions_per_sp_total_calc_err"] = df_uk.loc[item, "life_extinctions_per_sp_feed_calc_err"] + df_uk.loc[item, "life_extinctions_per_sp_food_calc_err"]
 
             # coc opp food/feed/total err
-            df_uk.loc[item, "coc_opp_food_err"] = bh[(bh.Item==item)].coc_opp_cost_calc_err.sum()
-            df_uk.loc[item, "coc_opp_feed_err"] = bf[(bf.Animal_Product==item)].coc_opp_cost_calc_err.sum()
-            df_uk.loc[item, "coc_opp_total_err"] = df_uk.loc[item, "coc_opp_feed_err"] + df_uk.loc[item, "coc_opp_food_err"]
+            df_uk.loc[item, "ghg_coc_food_kgco2e_calc_err"] = bh[(bh.Item==item)].ghg_coc_kgco2e_calc_err.sum()
+            df_uk.loc[item, "ghg_coc_feed_kgco2e_calc_err"] = bf[(bf.Animal_Product==item)].ghg_coc_kgco2e_calc_err.sum()
+            df_uk.loc[item, "ghg_coc_total_kgco2e_calc_err"] = df_uk.loc[item, "ghg_coc_feed_kgco2e_calc_err"] + df_uk.loc[item, "ghg_coc_food_kgco2e_calc_err"]
 
-            df_uk.loc[item, "Cons"] = bh[(bh.Item == item)].provenance.sum()
-            df_uk.loc[item, "Cons_err"] = bh[(bh.Item == item)].provenance_err.sum()
+            df_uk.loc[item, "consumed_tonnes"] = bh[(bh.Item == item)].provenance_tonnes.sum()
+            df_uk.loc[item, "consumed_tonnes_err"] = bh[(bh.Item == item)].provenance_tonnes_err.sum()
 
         except IndexError:
             item_code = lookup[lookup.ItemT_Name == item].ItemT_Code.values[0]
@@ -318,22 +310,21 @@ def main_global(year, coi_iso, bh, bf, results_dir=Path("./results"), amortizati
         kdf.columns = [_ if _ != "level_0" else "Item" for _ in kdf.columns]
     
     for item in kdf.Item.unique():
-        kdf.loc[kdf.Item==item, "primary_tonnage"] = xdf[(xdf.Item==item)&(xdf.ItemT_Name.isin([item, "Primary"]))].provenance.sum()
+        kdf.loc[kdf.Item==item, "primary_tonnes"] = xdf[(xdf.Item==item)&(xdf.ItemT_Name.isin([item, "Primary"]))].provenance_tonnes.sum()
         
     kdf.to_csv(f"{scenPath}/impacts_aggregated.csv")
     agg_impact_path = results_dir / "impacts" / str(year) / f"impacts_aggregated_{coi_iso}.csv"
     os.makedirs(agg_impact_path.parent, exist_ok=True)
     kdf.to_csv(agg_impact_path, index=False)
 
-    food_commodity_impacts = kdf[["Item", "primary_tonnage", "ghg_total", "bd_opp_total", "bd_opp_total_err", "coc_opp_total", "coc_opp_total_err", "Scarcity_weighted_water_l"]].copy()
-    food_commodity_impacts["kgCO2_per_kg"] = food_commodity_impacts.ghg_total / (food_commodity_impacts.primary_tonnage * 1000)
-    food_commodity_impacts["exp_extinctions_per_kg"] = food_commodity_impacts.bd_opp_total / (food_commodity_impacts.primary_tonnage * 1000)
-    food_commodity_impacts["exp_extinctions_err_per_kg"] = food_commodity_impacts.bd_opp_total_err / (food_commodity_impacts.primary_tonnage * 1000)
-    food_commodity_impacts["annual_coc_opp_cost_per_kg"] = (food_commodity_impacts.coc_opp_total / amortization_years) / (food_commodity_impacts.primary_tonnage * 1000)
-    food_commodity_impacts["annual_coc_opp_cost_err_per_kg"] = (food_commodity_impacts.coc_opp_total_err / amortization_years) / (food_commodity_impacts.primary_tonnage * 1000)
-    food_commodity_impacts["scarcity_weighted_water_use_litres_per_kg"] = food_commodity_impacts.Scarcity_weighted_water_l / (food_commodity_impacts.primary_tonnage * 1000)
+    food_commodity_impacts = kdf[["Item", "primary_tonnes", "ghg_prod_total_kgco2e_calc", "life_extinctions_per_sp_total_calc", "life_extinctions_per_sp_total_calc_err", "ghg_coc_total_kgco2e_calc", "ghg_coc_total_kgco2e_calc_err"]].copy()
+    food_commodity_impacts["ghg_prod_kgco2e_per_kg"] = food_commodity_impacts.ghg_prod_total_kgco2e_calc / (food_commodity_impacts.primary_tonnes * 1000)
+    food_commodity_impacts["life_extinctions_per_sp_per_kg"] = food_commodity_impacts.life_extinctions_per_sp_total_calc / (food_commodity_impacts.primary_tonnes * 1000)
+    food_commodity_impacts["life_extinctions_per_sp_per_kg_err"] = food_commodity_impacts.life_extinctions_per_sp_total_calc_err / (food_commodity_impacts.primary_tonnes * 1000)
+    food_commodity_impacts["ghg_coc_kgco2e_per_kg_per_year"] = (food_commodity_impacts.ghg_coc_total_kgco2e_calc / amortization_years) / (food_commodity_impacts.primary_tonnes * 1000)
+    food_commodity_impacts["ghg_coc_kgco2e_per_kg_per_year_err"] = (food_commodity_impacts.ghg_coc_total_kgco2e_calc_err / amortization_years) / (food_commodity_impacts.primary_tonnes * 1000)
 
-    food_commodity_impacts = food_commodity_impacts.drop(columns=["ghg_total", "bd_opp_total", "coc_opp_total", "Scarcity_weighted_water_l"])
+    food_commodity_impacts = food_commodity_impacts.drop(columns=["ghg_prod_total_kgco2e_calc", "life_extinctions_per_sp_total_calc", "life_extinctions_per_sp_total_calc_err", "ghg_coc_total_kgco2e_calc", "ghg_coc_total_kgco2e_calc_err"])
     last_row = food_commodity_impacts.iloc[-1].copy()
     last_row.iloc[1:] = 0
     last_row.iloc[0] = "Zero"
@@ -342,7 +333,7 @@ def main_global(year, coi_iso, bh, bf, results_dir=Path("./results"), amortizati
     old_to_new = pd.read_csv(f"{datPath}/composition_old_vs_new.csv")
     old_to_new = old_to_new.merge(food_commodity_impacts, left_on="New", right_on="Item", how="left")
     old_to_new.drop(columns=["Item", "New"], inplace=True)
-    old_to_new.rename(columns={"Old":""}, inplace=True)
+    old_to_new.rename(columns={"Old":"Item"}, inplace=True)
     old_to_new.to_csv(f"{scenPath}/food_commodity_impacts.csv", index=False)
 
     return missing_items

@@ -48,9 +48,9 @@ def bar_plot(fig,ax:Axes, groups:list[Group], ylim:tuple[float, float], relative
             tags.append(tag_formatting(c.name))
             tag_colors.append(g.color)
         g_end = left-pad
-        g_avg = (g.dataframe(1)["bd_opp_total"].sum() - g.dataframe(0)["bd_opp_total"].sum())/g.dataframe(0)["bd_opp_total"].sum()
-        t1 += g.dataframe(0)["bd_opp_total"].sum()
-        t2 += g.dataframe(1)["bd_opp_total"].sum()
+        g_avg = (g.dataframe(1)["life_extinctions_per_sp_total_calc"].sum() - g.dataframe(0)["life_extinctions_per_sp_total_calc"].sum())/g.dataframe(0)["life_extinctions_per_sp_total_calc"].sum()
+        t1 += g.dataframe(0)["life_extinctions_per_sp_total_calc"].sum()
+        t2 += g.dataframe(1)["life_extinctions_per_sp_total_calc"].sum()
         hline = ax.hlines(g_avg, xmin=g_start, xmax=g_end, color=g.color, linewidth=0.8,
                           label=tag_formatting(g.name), linestyle=[(3, (3, 3))], gapcolor='white', zorder=2)
         labels.append(tag_formatting(g.name))

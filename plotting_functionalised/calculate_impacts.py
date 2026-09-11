@@ -17,15 +17,15 @@ def calculate_impacts_sub(feed_df_2010, feed_df_2021, pasture_df_2010, pasture_d
         country_pasture_2010 = pasture_df_2010[pasture_df_2010["Producer_Country_Code"]==country]
         iso = country_pasture_2010["Country_ISO"].iloc[0]
 
-        E = country_feed_2010["bd_opp_cost_calc"].sum() + country_pasture_2010["bd_opp_cost_calc"].sum()
-        Production = country_pasture_2010["provenance"].sum()*1000
+        E = country_feed_2010["life_extinctions_per_sp_calc"].sum() + country_pasture_2010["life_extinctions_per_sp_calc"].sum()
+        Production = country_pasture_2010["provenance_tonnes"].sum()*1000
         E_per_kg = E / Production
 
-        Pasture_m2_per_kg = country_pasture_2010["Pasture_avg_calc"].sum() / Production
-        Pasture_E_per_m2 = country_pasture_2010["bd_opp_cost_calc"].sum() / country_pasture_2010["Pasture_avg_calc"].sum()
+        Pasture_m2_per_kg = country_pasture_2010["pasture_area_m2_calc"].sum() / Production
+        Pasture_E_per_m2 = country_pasture_2010["life_extinctions_per_sp_calc"].sum() / country_pasture_2010["pasture_area_m2_calc"].sum()
 
-        Feed_m2_per_kg = country_feed_2010["FAO_land_calc_m2"].sum() / Production
-        Feed_E_per_m2 = country_feed_2010["bd_opp_cost_calc"].sum() / country_feed_2010["FAO_land_calc_m2"].sum()
+        Feed_m2_per_kg = country_feed_2010["arable_area_m2_calc"].sum() / Production
+        Feed_E_per_m2 = country_feed_2010["life_extinctions_per_sp_calc"].sum() / country_feed_2010["arable_area_m2_calc"].sum()
 
         cdf_2010 = pd.DataFrame({"ISO":[iso],
                                 "E":[E],
@@ -35,8 +35,8 @@ def calculate_impacts_sub(feed_df_2010, feed_df_2021, pasture_df_2010, pasture_d
                                 "Pasture_E_per_m2":[Pasture_E_per_m2],
                                 "Feed_m2_per_kg":[Feed_m2_per_kg],
                                 "Feed_E_per_m2":[Feed_E_per_m2],
-                                "Feed_E":[country_feed_2010["bd_opp_cost_calc"].sum()],
-                                "Pasture_E":[country_pasture_2010["bd_opp_cost_calc"].sum()]
+                                "Feed_E":[country_feed_2010["life_extinctions_per_sp_calc"].sum()],
+                                "Pasture_E":[country_pasture_2010["life_extinctions_per_sp_calc"].sum()]
                                 })
 
         Country_df_2010 = pd.concat([Country_df_2010, cdf_2010], ignore_index=True)
@@ -46,15 +46,15 @@ def calculate_impacts_sub(feed_df_2010, feed_df_2021, pasture_df_2010, pasture_d
         country_pasture_2021 = pasture_df_2021[pasture_df_2021["Producer_Country_Code"]==country]
         iso = country_pasture_2021["Country_ISO"].iloc[0]
 
-        E = country_feed_2021["bd_opp_cost_calc"].sum() + country_pasture_2021["bd_opp_cost_calc"].sum()
-        Production = country_pasture_2021["provenance"].sum()*1000
+        E = country_feed_2021["life_extinctions_per_sp_calc"].sum() + country_pasture_2021["life_extinctions_per_sp_calc"].sum()
+        Production = country_pasture_2021["provenance_tonnes"].sum()*1000
         E_per_kg = E / Production
 
-        Pasture_m2_per_kg = country_pasture_2021["Pasture_avg_calc"].sum() / Production
-        Pasture_E_per_m2 = country_pasture_2021["bd_opp_cost_calc"].sum() / country_pasture_2021["Pasture_avg_calc"].sum()
+        Pasture_m2_per_kg = country_pasture_2021["pasture_area_m2_calc"].sum() / Production
+        Pasture_E_per_m2 = country_pasture_2021["life_extinctions_per_sp_calc"].sum() / country_pasture_2021["pasture_area_m2_calc"].sum()
 
-        Feed_m2_per_kg = country_feed_2021["FAO_land_calc_m2"].sum() / Production
-        Feed_E_per_m2 = country_feed_2021["bd_opp_cost_calc"].sum() / country_feed_2021["FAO_land_calc_m2"].sum()
+        Feed_m2_per_kg = country_feed_2021["arable_area_m2_calc"].sum() / Production
+        Feed_E_per_m2 = country_feed_2021["life_extinctions_per_sp_calc"].sum() / country_feed_2021["arable_area_m2_calc"].sum()
 
         cdf_2021 = pd.DataFrame({"ISO":[iso],
                                 "E":[E],
@@ -64,8 +64,8 @@ def calculate_impacts_sub(feed_df_2010, feed_df_2021, pasture_df_2010, pasture_d
                                 "Pasture_E_per_m2":[Pasture_E_per_m2],
                                 "Feed_m2_per_kg":[Feed_m2_per_kg],
                                 "Feed_E_per_m2":[Feed_E_per_m2],
-                                "Feed_E":[country_feed_2021["bd_opp_cost_calc"].sum()],
-                                "Pasture_E":[country_pasture_2021["bd_opp_cost_calc"].sum()]
+                                "Feed_E":[country_feed_2021["life_extinctions_per_sp_calc"].sum()],
+                                "Pasture_E":[country_pasture_2021["life_extinctions_per_sp_calc"].sum()]
                                 })
 
         Country_df_2021 = pd.concat([Country_df_2021, cdf_2021], ignore_index=True)

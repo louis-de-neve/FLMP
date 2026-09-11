@@ -112,8 +112,8 @@ def label_formatting(label):
 
 def modify_axes(ax1, ax2, df_2010, df_2021):
     # Axes manipulation for scale
-    total_2010 = df_2010["bd_opp_total"].sum()
-    total_2021 = df_2021["bd_opp_total"].sum()
+    total_2010 = df_2010["life_extinctions_per_sp_total_calc"].sum()
+    total_2021 = df_2021["life_extinctions_per_sp_total_calc"].sum()
 
     if total_2010 > total_2021:
         axis_to_change = ax2
@@ -158,23 +158,23 @@ def define_groups_and_colors(data:DataFrame, order:DataFrame, colors:DataFrame, 
     return groups
         
 def assign_group_data(groups:list[Group], data:DataFrame, i:int)->None:
-    total_bd_opp = data["bd_opp_total"].sum()
+    total_bd_opp = data["life_extinctions_per_sp_total_calc"].sum()
     for group in groups:
         group_data = data[data["Group"] == group.name]
-        group_bd_opp = group_data["bd_opp_total"].sum()
+        group_bd_opp = group_data["life_extinctions_per_sp_total_calc"].sum()
         group.set_xval(i, group_bd_opp / total_bd_opp)
         group.set_data(i, group_data)
 
 def define_commodities_and_colors(ax:Axes, group:Group, classify_as_other_limit:float)->None:
     group_df = group.dataframe(0).copy()
-    group_df = group_df.sort_values("bd_opp_total", ascending=False).reset_index(drop=True)
-    group_df["group_bd_opp_perc"] = group_df["bd_opp_total"] / group_df["bd_opp_total"].sum()
+    group_df = group_df.sort_values("life_extinctions_per_sp_total_calc", ascending=False).reset_index(drop=True)
+    group_df["group_bd_opp_perc"] = group_df["life_extinctions_per_sp_total_calc"] / group_df["life_extinctions_per_sp_total_calc"].sum()
     other_categories = group_df[(group_df["Item"].str.contains("other", case=False))|(group_df["group_bd_opp_perc"]<classify_as_other_limit)]["Item"].tolist()
     other_categories = [] if len(other_categories) == 1 else other_categories
     
 
     final_df = group.dataframe(1).copy()
-    final_df["group_bd_opp_perc"] = final_df["bd_opp_total"] / final_df["bd_opp_total"].sum()
+    final_df["group_bd_opp_perc"] = final_df["life_extinctions_per_sp_total_calc"] / final_df["life_extinctions_per_sp_total_calc"].sum()
 
 
     intial_non_other_df = group_df[~group_df["Item"].isin(other_categories)]
@@ -189,14 +189,14 @@ def define_commodities_and_colors(ax:Axes, group:Group, classify_as_other_limit:
         color = cmap(m)
         y0 = item_row["group_bd_opp_perc"]
         y1 = final_df[final_df["Item"] == item_name]["group_bd_opp_perc"].values[0] if item_name in final_df["Item"].values else 0
-        raw0 = item_row["bd_opp_total"]
-        raw1 = final_df[final_df["Item"] == item_name]["bd_opp_total"].values[0] if item_name in final_df["Item"].values else 0
-        err0 = item_row["bd_opp_total_err"]
-        err1 = final_df[final_df["Item"] == item_name]["bd_opp_total_err"].values[0] if item_name in final_df["Item"].values else 0
-        cons0 = item_row["Cons"]
-        cons1 = final_df[final_df["Item"] == item_name]["Cons"].values[0] if item_name in final_df["Item"].values else 0
-        area0 = item_row["Pasture_m2"] + item_row["Arable_m2"]
-        area1 = final_df[final_df["Item"] == item_name]["Pasture_m2"].values[0] + final_df[final_df["Item"] == item_name]["Arable_m2"].values[0] if item_name in final_df["Item"].values else 0
+        raw0 = item_row["life_extinctions_per_sp_total_calc"]
+        raw1 = final_df[final_df["Item"] == item_name]["life_extinctions_per_sp_total_calc"].values[0] if item_name in final_df["Item"].values else 0
+        err0 = item_row["life_extinctions_per_sp_total_calc_err"]
+        err1 = final_df[final_df["Item"] == item_name]["life_extinctions_per_sp_total_calc_err"].values[0] if item_name in final_df["Item"].values else 0
+        cons0 = item_row["consumed_tonnes"]
+        cons1 = final_df[final_df["Item"] == item_name]["consumed_tonnes"].values[0] if item_name in final_df["Item"].values else 0
+        area0 = item_row["pasture_area_m2_calc"] + item_row["arable_area_m2_calc"]
+        area1 = final_df[final_df["Item"] == item_name]["pasture_area_m2_calc"].values[0] + final_df[final_df["Item"] == item_name]["arable_area_m2_calc"].values[0] if item_name in final_df["Item"].values else 0
         legend_plot = ax.plot([], [], color=cmap(m), lw=5, label="_")[0]
 
         commodity = Commodity(name=item_name, m=m, color=color)
@@ -217,9 +217,9 @@ def define_commodities_and_colors(ax:Axes, group:Group, classify_as_other_limit:
     def others(df, non_other_cats):
         others_df = df[~df["Item"].isin(non_other_cats)]
         others_sum_perc = others_df["group_bd_opp_perc"].sum()
-        others_sum_raw = others_df["bd_opp_total"].sum()
-        others_cons = others_df["Cons"].sum()
-        others_err= others_df["bd_opp_total_err"].sum()
+        others_sum_raw = others_df["life_extinctions_per_sp_total_calc"].sum()
+        others_cons = others_df["consumed_tonnes"].sum()
+        others_err= others_df["life_extinctions_per_sp_total_calc_err"].sum()
         return others_sum_perc, others_sum_raw, others_err, others_cons
     legend_plot = ax.plot([], [], color=cmap(m), lw=5, label="_")[0]
     if len(other_categories) > 0:

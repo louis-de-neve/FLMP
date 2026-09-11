@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-RESULTS_DIR = Path("/maps/tsb42/leakage_v1/results/mrio_pipeline_results_260804")
+RESULTS_DIR = Path("../flmp_results/flmp_results_261009")
 YEAR = 2021
 
 
@@ -22,12 +22,12 @@ def build_bd_intensity_matrix(results_dir: Path, year: int) -> tuple[pd.DataFram
     rows = []
     for f in tqdm(files, desc=f"Reading impacts_aggregated files for {year}"):
         iso = f.stem.split("_")[-1]
-        df = pd.read_csv(f, usecols=["Item", "tonnage", "bd_opp_total", "bd_opp_total_err"])
-        df = df.groupby("Item", as_index=False)[["tonnage", "bd_opp_total", "bd_opp_total_err"]].sum()
+        df = pd.read_csv(f, usecols=["Item", "throughput_tonnes", "life_extinctions_per_sp_total_calc", "life_extinctions_per_sp_total_calc_err"])
+        df = df.groupby("Item", as_index=False)[["throughput_tonnes", "life_extinctions_per_sp_total_calc", "life_extinctions_per_sp_total_calc_err"]].sum()
 
-        tonnage = df["tonnage"].where(df["tonnage"] != 0, np.nan)
-        df["ratio"] = df["bd_opp_total"] / tonnage
-        df["err_ratio"] = df["bd_opp_total_err"] / tonnage
+        tonnage = df["throughput_tonnes"].where(df["throughput_tonnes"] != 0, np.nan)
+        df["ratio"] = df["life_extinctions_per_sp_total_calc"] / tonnage
+        df["err_ratio"] = df["life_extinctions_per_sp_total_calc_err"] / tonnage
         df["Country"] = iso
 
         rows.append(df[["Country", "Item", "ratio", "err_ratio"]])

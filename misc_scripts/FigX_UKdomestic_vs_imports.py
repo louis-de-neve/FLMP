@@ -33,7 +33,7 @@ imported = df[df["Country_ISO"] != country]
 
 def group_totals(sub_df):
     dfx = sub_df.merge(cwalk, left_on="ItemT_Code", right_on="Item_Code", how="left")
-    return dfx.groupby("group_name_v7").agg({"provenance": "sum", "bd_opp_cost_calc": "sum"})
+    return dfx.groupby("group_name_v7").agg({"provenance_tonnes": "sum", "life_extinctions_per_sp_calc": "sum"})
 
 domestic_totals = group_totals(domestic)
 imported_totals = group_totals(imported)
@@ -51,12 +51,12 @@ impact_bottoms = [0, 0]
 for group in groups:
 
     mass_vals = [
-        domestic_totals["provenance"].get(group, 0) / 1e6,
-        imported_totals["provenance"].get(group, 0) / 1e6,
+        domestic_totals["provenance_tonnes"].get(group, 0) / 1e6,
+        imported_totals["provenance_tonnes"].get(group, 0) / 1e6,
     ]
     impact_vals = [
-        domestic_totals["bd_opp_cost_calc"].get(group, 0) / sp_count,
-        imported_totals["bd_opp_cost_calc"].get(group, 0) / sp_count,
+        domestic_totals["life_extinctions_per_sp_calc"].get(group, 0) / sp_count,
+        imported_totals["life_extinctions_per_sp_calc"].get(group, 0) / sp_count,
     ]
 
     alpha = 0.8

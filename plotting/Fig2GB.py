@@ -41,7 +41,7 @@ pop_data["Value"] *= 1000  # convert to individuals
 master_df_local = pd.DataFrame()
 master_df_imports = pd.DataFrame()
 
-variable = "Cons"
+variable = "consumed_tonnes"
 
 for year in os.listdir(results_dir):
     if year == "impacts":
@@ -55,21 +55,21 @@ for year in os.listdir(results_dir):
 
         df1_path = os.path.join(results_dir, year, country, f"df_{country.lower()}.csv")
         df1 = pd.read_csv(df1_path, index_col=0)
-        df1 = df1[["Group", variable, "bd_opp_total", "bd_opp_total_err"]]
+        df1 = df1[["Group", variable, "life_extinctions_per_sp_total_calc", "life_extinctions_per_sp_total_calc_err"]]
         df1 = df1.groupby(["Group"]).sum().reset_index()
         df1["Year"] = int(year)
         df1["Country"] = country
         df1 = df1.merge(area_codes, on="Country", how="left")
         df1 = df1.merge(pop_data, left_on=["FAO_Code", "Year"], right_on=["Area Code", "Year"], how="left")
         df1[variable] /= (df1["Value"] * 365)  # per capita per day
-        df1["bd_opp_total"] /= (df1["Value"] * 365)
-        df1["bd_opp_total_err"] /= (df1["Value"] * 365)
+        df1["life_extinctions_per_sp_total_calc"] /= (df1["Value"] * 365)
+        df1["life_extinctions_per_sp_total_calc_err"] /= (df1["Value"] * 365)
         df1 = df1.drop(columns=["FAO_Code", "Area Code", "Value"])
         master_df_local = pd.concat([master_df_local, df1], ignore_index=True)
 
         df2_path = os.path.join(results_dir, year, country, "df_os.csv")
         df2 = pd.read_csv(df2_path, index_col=0)
-        df2 = df2[["Group", variable, "bd_opp_total", "bd_opp_total_err"]]
+        df2 = df2[["Group", variable, "life_extinctions_per_sp_total_calc", "life_extinctions_per_sp_total_calc_err"]]
         if country == "GBR":
             print(df2[df2["Group"]=="Ruminant meat"], year)
         df2 = df2.groupby(["Group"]).sum().reset_index()
@@ -78,8 +78,8 @@ for year in os.listdir(results_dir):
         df2 = df2.merge(area_codes, on="Country", how="left")
         df2 = df2.merge(pop_data, left_on=["FAO_Code", "Year"], right_on=["Area Code", "Year"], how="left")
         df2[variable] /= (df2["Value"] * 365)  # per capita per day
-        df2["bd_opp_total_err"] /= (df2["Value"] * 365)
-        df2["bd_opp_total"] /= (df2["Value"] * 365)
+        df2["life_extinctions_per_sp_total_calc_err"] /= (df2["Value"] * 365)
+        df2["life_extinctions_per_sp_total_calc"] /= (df2["Value"] * 365)
         df2 = df2.drop(columns=["FAO_Code", "Area Code", "Value"])
         master_df_imports = pd.concat([master_df_imports, df2], ignore_index=True)
 
@@ -107,12 +107,12 @@ master_df_imports = master_df_imports[master_df_imports["Country"] == country]
 
 
 variable2 = "Impact per kg"
-master_df_local[variable2] = master_df_local["bd_opp_total"] / master_df_local["Cons"]
-master_df_imports[variable2] = master_df_imports["bd_opp_total"] / master_df_imports["Cons"]
+master_df_local[variable2] = master_df_local["life_extinctions_per_sp_total_calc"] / master_df_local["consumed_tonnes"]
+master_df_imports[variable2] = master_df_imports["life_extinctions_per_sp_total_calc"] / master_df_imports["consumed_tonnes"]
 
 plot_var = variable # kg
 plot_var = variable2 # E/kg
-plot_var = "bd_opp_total" # E
+plot_var = "life_extinctions_per_sp_total_calc" # E
 
 for i, Group in enumerate(groups):
     master_df_imports_group = master_df_imports[master_df_imports["Group"] == Group].sort_values("Year").reset_index(drop=True)

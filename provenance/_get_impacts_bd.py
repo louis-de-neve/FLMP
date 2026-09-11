@@ -13,6 +13,9 @@ import sys
 
 from provenance._get_biodiversity_vals import fetch_biodiversity_vals_path
 
+# tonnes C -> kg CO2e: x1000 (t->kg) x 44/12 (molar mass ratio)
+KG_CO2E_PER_TONNE_C = 1000.0 * 44.0 / 12.0
+
 def fetch_coc_vals_path(year, datPath, use_2020=True):
     # the coc values are computed on the mapspam crop distributions, so the vintages
     # available here mirror the mapspam years and follow the same use_2020 switch.
@@ -49,6 +52,10 @@ def get_impacts(wdf, year, coi, filename, results_dir=Path("./results"), use_202
     wdf = wdf[np.logical_not(wdf.Item.isna())]
     # wdf = wdf[wdf.Value >= 0.015]
 
+    # name upstream columns at the impacts boundary
+    wdf = wdf.rename(columns={"provenance": "provenance_tonnes",
+                              "provenance_err": "provenance_tonnes_err"})
+
     # load additional data and merge into wdf
     commodity_crosswalk = pd.read_csv(f"{datPath}/commodity_crosswalk.csv", index_col = 0)
     wwf = get_wwf_pbd(datPath)
@@ -69,21 +76,23 @@ def get_impacts(wdf, year, coi, filename, results_dir=Path("./results"), use_202
     global_yields = yield_dat[yield_dat["Area_Code"] == 5000].copy()
     global_yields = global_yields.rename(columns={"Value":"Global_Yield"})
     wdf = wdf.merge(global_yields[["Global_Yield", "Item_Code"]], how="left", on="Item_Code")
-    yield_dat = yield_dat.rename(columns={"Value":"Yield"})
+    yield_dat = yield_dat.rename(columns={"Value":"yield_kg_per_m2"})
     wdf = wdf.merge(yield_dat, how="left", left_on=["Producer_Country_Code", "Item_Code"], right_on=["Area_Code", "Item_Code"])
     wdf = wdf.drop(columns=["Area_Code"])
-    wdf.loc[wdf.Yield.isna(), "Yield"] = wdf.loc[wdf.Yield.isna(), "Global_Yield"]
+    wdf.loc[wdf.yield_kg_per_m2.isna(), "yield_kg_per_m2"] = wdf.loc[wdf.yield_kg_per_m2.isna(), "Global_Yield"]
     wdf = wdf.drop(columns=["Global_Yield"])
 
 
-    # convert from kg/ha to kg/m2
-    wdf.Yield = wdf.Yield/10000 
+    # FAOSTAT element 5412 is reported in kg/ha; convert to kg/m2
+    wdf["yield_kg_per_m2"] = wdf["yield_kg_per_m2"] / 10000
 
 
     # load other impacts and fall back on global values
-    wwf_arable_land = wwf[["Country_ISO", "Product", "Arable_avg", "SWWU_avg", "GHG_avg", "Pasture_avg"]].copy()
-    wwf_global_values = (wwf[wwf["Country_ISO"]=="all-r"][["Product", "Arable_avg", "SWWU_avg", "GHG_avg", "Pasture_avg"]]
-        .rename(columns={"Arable_avg":"Global_Arable_avg", "SWWU_avg":"Global_SWWU_avg", "GHG_avg":"Global_GHG_avg", "Pasture_avg":"Global_Pasture_avg"}))
+    # SWWU_avg dropped: it is a per-country AWARE factor, not a per-kg intensity.
+    # to restore water, weight WU_avg (litres/kg) by it.
+    wwf_arable_land = wwf[["Country_ISO", "Product", "Arable_avg", "GHG_avg", "Pasture_avg"]].copy()
+    wwf_global_values = (wwf[wwf["Country_ISO"]=="all-r"][["Product", "Arable_avg", "GHG_avg", "Pasture_avg"]]
+        .rename(columns={"Arable_avg":"Global_Arable_avg", "GHG_avg":"Global_GHG_avg", "Pasture_avg":"Global_Pasture_avg"}))
     wdf = (wdf
         .merge(wwf_arable_land, how="left", left_on=["Country_ISO", "WWF_cat"], right_on=["Country_ISO", "Product"])
         .drop(columns=["Product"])
@@ -91,9 +100,8 @@ def get_impacts(wdf, year, coi, filename, results_dir=Path("./results"), use_202
         .drop(columns=["Product"]))
     wdf.loc[wdf.Pasture_avg.isna(), "Pasture_avg"] = wdf.loc[wdf.Pasture_avg.isna(), "Global_Pasture_avg"]
     wdf.loc[wdf.Arable_avg.isna(), "Arable_avg"] = wdf.loc[wdf.Arable_avg.isna(), "Global_Arable_avg"]
-    wdf.loc[wdf.SWWU_avg.isna(), "SWWU_avg"] = wdf.loc[wdf.SWWU_avg.isna(), "Global_SWWU_avg"]
     wdf.loc[wdf.GHG_avg.isna(), "GHG_avg"] = wdf.loc[wdf.GHG_avg.isna(), "Global_GHG_avg"]
-    wdf = wdf.drop(columns=["Global_Arable_avg", "Global_SWWU_avg", "Global_GHG_avg", "Global_Pasture_avg"])
+    wdf = wdf.drop(columns=["Global_Arable_avg", "Global_GHG_avg", "Global_Pasture_avg"])
 
 
     # Pasture calcs (only runs if not feed calc)
@@ -102,6 +110,9 @@ def get_impacts(wdf, year, coi, filename, results_dir=Path("./results"), use_202
         tb_pasture_vals = pd.read_csv(f"{results_dir}/{year}/.mrio/Pasture_calc.csv")[["Item_Code", "fp_m2_kg", "fp_m2_kg_perc", "Country_ISO"]]
         global_median_tb = {v: tb_pasture_vals[tb_pasture_vals["Item_Code"]==v]["fp_m2_kg"].median() for v in rums}
         global_median_tb_df = pd.DataFrame.from_dict(global_median_tb, orient='index', columns=['global_median_fp_m2_kg'])
+
+        # Pasture_calc.csv keeps its own fp_* names; rename at the boundary
+        tb_pasture_vals = tb_pasture_vals.rename(columns={"fp_m2_kg_perc": "pasture_area_relerr_frac"})
 
         wdf = wdf.merge(tb_pasture_vals, how="left", on=["Country_ISO", "Item_Code"])
         wdf = wdf.merge(global_median_tb_df, how="left", left_on=["Item_Code"], right_index=True)
@@ -115,30 +126,31 @@ def get_impacts(wdf, year, coi, filename, results_dir=Path("./results"), use_202
 
 
     # land use calculations with arable_avg as redundant fallback
-    wdf["WWF_derived_yield"] = 1/(wdf.Arable_avg) # convert from ha/kg to kg/m2
-    wdf.loc[wdf.Yield.isna(), "Yield"] = wdf.loc[wdf.Yield.isna(), "WWF_derived_yield"]
+    wdf["WWF_derived_yield"] = 1/(wdf.Arable_avg) # Arable_avg is m2/kg, so its reciprocal is kg/m2
+    wdf.loc[wdf.yield_kg_per_m2.isna(), "yield_kg_per_m2"] = wdf.loc[wdf.yield_kg_per_m2.isna(), "WWF_derived_yield"]
     wdf = wdf.drop(columns=["WWF_derived_yield", "Arable_avg"])
-    wdf["FAO_land_calc_m2"] = (wdf.provenance * 1000) / wdf.Yield
+    wdf["arable_area_m2_calc"] = (wdf.provenance_tonnes * 1000) / wdf.yield_kg_per_m2
 
 
-    # calculate impacts
-    impact_list = ["SWWU_avg", "GHG_avg", "Pasture_avg"]
-    for impact in impact_list:
-        wdf[impact + "_calc"] = wdf[impact] * (wdf.provenance * 1000) # impact per kg
-    wdf = wdf.drop(columns=impact_list)
+    # calculate impacts (WWF values are per kg, so x kg gives the row total)
+    impact_columns = {
+        "GHG_avg": "ghg_prod_kgco2e_calc",
+        "Pasture_avg": "pasture_area_m2_calc",
+    }
+    for impact, out_col in impact_columns.items():
+        wdf[out_col] = wdf[impact] * (wdf.provenance_tonnes * 1000)
+    wdf = wdf.drop(columns=list(impact_columns))
 
 
     # error propogation
     if filename[:4] != "feed":
-        wdf.fp_m2_kg_perc = wdf.fp_m2_kg_perc.fillna(0)
-        wdf["err"] = (np.sqrt((wdf.provenance_err / wdf.provenance)**2+(wdf.fp_m2_kg_perc**2)))
+        wdf.pasture_area_relerr_frac = wdf.pasture_area_relerr_frac.fillna(0)
+        wdf["relerr"] = (np.sqrt((wdf.provenance_tonnes_err / wdf.provenance_tonnes)**2+(wdf.pasture_area_relerr_frac**2)))
     else:
-        wdf["err"] = wdf.provenance_err / wdf.provenance
-    wdf["FAO_land_calc_m2_err"] = wdf["FAO_land_calc_m2"] * wdf["err"]
-    wdf["SWWU_avg_calc_err"] = wdf["SWWU_avg_calc"] * wdf["err"]
-    wdf["GHG_avg_calc_err"] = wdf["GHG_avg_calc"] * wdf["err"]
-    wdf["Pasture_avg_calc_err"] = wdf["Pasture_avg_calc"] * wdf["err"]
-    wdf = wdf.drop(columns=["err"])
+        wdf["relerr"] = wdf.provenance_tonnes_err / wdf.provenance_tonnes
+    for col in ["arable_area_m2_calc", *impact_columns.values()]:
+        wdf[f"{col}_err"] = wdf[col] * wdf["relerr"]
+    wdf = wdf.drop(columns=["relerr"])
 
     # biodiversity opportunity cost
     # bd_path = f"{datPath}/LIFE_results_SPAM_2020.csv"
@@ -150,8 +162,10 @@ def get_impacts(wdf, year, coi, filename, results_dir=Path("./results"), use_202
     bd_opp_cost = pd.read_csv(bd_path)
 
     bd_opp_cost = bd_opp_cost[bd_opp_cost.band_name==bd_band_name]
-    bd_opp_cost.deltaE_mean *= -bd_opp_cost.sp_count
-    bd_opp_cost.deltaE_mean_sem *= bd_opp_cost.sp_count
+    # sign flip must stay: deltaE_mean is negative for nearly every row and the
+    # `> 0` filters below select on it. sp_count not applied, so values are per sp.
+    bd_opp_cost.deltaE_mean *= -1
+    # bd_opp_cost.deltaE_mean_sem *= bd_opp_cost.sp_count
     
 
     oc_crop = bd_opp_cost[(bd_opp_cost.deltaE_mean > 0)].copy()
@@ -168,17 +182,17 @@ def get_impacts(wdf, year, coi, filename, results_dir=Path("./results"), use_202
 
     # reshape bd_opp_cost for merging
     bd_opp_cost = bd_opp_cost[["ISO3", "item_name", "deltaE_mean", "deltaE_mean_sem"]]
-    bd_opp_cost = bd_opp_cost.rename(columns={"ISO3":"Country_ISO", "item_name":"spam_name", "deltaE_mean":"opp_cost_val", "deltaE_mean_sem": "opp_cost_err"})
+    bd_opp_cost = bd_opp_cost.rename(columns={"ISO3":"Country_ISO", "item_name":"spam_name", "deltaE_mean":"life_extinctions_per_sp_per_km2", "deltaE_mean_sem": "life_extinctions_per_sp_per_km2_err"})
 
     # calculate global averages for fallback 1
     global_bd_opp_cost = pd.DataFrame()
     for v in bd_opp_cost.spam_name.dropna().unique():
-        subset = bd_opp_cost[(bd_opp_cost.spam_name == v)&(bd_opp_cost.opp_cost_val>0)]["opp_cost_val"].dropna().values
+        subset = bd_opp_cost[(bd_opp_cost.spam_name == v)&(bd_opp_cost.life_extinctions_per_sp_per_km2>0)]["life_extinctions_per_sp_per_km2"].dropna().values
         mean = np.exp(np.log(subset).mean())
-        subset2 = bd_opp_cost[(bd_opp_cost.spam_name == v)&(bd_opp_cost.opp_cost_val>0)]["opp_cost_err"].dropna().values
+        subset2 = bd_opp_cost[(bd_opp_cost.spam_name == v)&(bd_opp_cost.life_extinctions_per_sp_per_km2>0)]["life_extinctions_per_sp_per_km2_err"].dropna().values
         err = np.exp(np.log(subset2).mean())
-        global_bd_opp_cost.loc[v, "opp_cost_val_fallback"] = mean
-        global_bd_opp_cost.loc[v, "opp_cost_err_fallback"] = err
+        global_bd_opp_cost.loc[v, "life_extinctions_per_sp_per_km2_fallback"] = mean
+        global_bd_opp_cost.loc[v, "life_extinctions_per_sp_per_km2_err_fallback"] = err
 
     # get spam_name to merge with life data
     wdf = wdf.merge(commodity_crosswalk[["Item_Code", f"spam_{spam_yr}"]], on="Item_Code", how="left")
@@ -190,29 +204,30 @@ def get_impacts(wdf, year, coi, filename, results_dir=Path("./results"), use_202
 
     # fallback 1 (global item averages)
     wdf = wdf.merge(global_bd_opp_cost, how="left", left_on=["spam_name"], right_index=True)
-    wdf.loc[(wdf.opp_cost_val.isna())|(wdf.opp_cost_val==0), "opp_cost_val"] = wdf.loc[(wdf.opp_cost_val.isna())|(wdf.opp_cost_val==0), "opp_cost_val_fallback"]
-    wdf.loc[(wdf.opp_cost_err.isna())|(wdf.opp_cost_err==0), "opp_cost_err"] = wdf.loc[(wdf.opp_cost_err.isna())|(wdf.opp_cost_err==0), "opp_cost_err_fallback"]
+    wdf.loc[(wdf.life_extinctions_per_sp_per_km2.isna())|(wdf.life_extinctions_per_sp_per_km2==0), "life_extinctions_per_sp_per_km2"] = wdf.loc[(wdf.life_extinctions_per_sp_per_km2.isna())|(wdf.life_extinctions_per_sp_per_km2==0), "life_extinctions_per_sp_per_km2_fallback"]
+    wdf.loc[(wdf.life_extinctions_per_sp_per_km2_err.isna())|(wdf.life_extinctions_per_sp_per_km2_err==0), "life_extinctions_per_sp_per_km2_err"] = wdf.loc[(wdf.life_extinctions_per_sp_per_km2_err.isna())|(wdf.life_extinctions_per_sp_per_km2_err==0), "life_extinctions_per_sp_per_km2_err_fallback"]
 
 
 
     # fallback 2 (global type averages)
-    wdf.loc[(wdf.opp_cost_val.isna())|(wdf.opp_cost_val==0), "opp_cost_val"] = oc_crop
-    wdf.loc[(wdf.opp_cost_err.isna())|(wdf.opp_cost_err==0), "opp_cost_err"] = oc_crop_err
-    wdf = wdf.drop(columns=["opp_cost_val_fallback", "opp_cost_err_fallback"])
+    wdf.loc[(wdf.life_extinctions_per_sp_per_km2.isna())|(wdf.life_extinctions_per_sp_per_km2==0), "life_extinctions_per_sp_per_km2"] = oc_crop
+    wdf.loc[(wdf.life_extinctions_per_sp_per_km2_err.isna())|(wdf.life_extinctions_per_sp_per_km2_err==0), "life_extinctions_per_sp_per_km2_err"] = oc_crop_err
+    wdf = wdf.drop(columns=["life_extinctions_per_sp_per_km2_fallback", "life_extinctions_per_sp_per_km2_err_fallback"])
 
     # convert opp cost from km2 to m2
-    wdf["bd_opp_cost_m2"] = np.abs(wdf["opp_cost_val"] / 1000000)
+    wdf["life_extinctions_per_sp_per_m2"] = np.abs(wdf["life_extinctions_per_sp_per_km2"] / 1000000)
 
 
-    wdf.loc[wdf.Animal_Product=="Primary", "bd_val"] = wdf.loc[wdf.Animal_Product=="Primary", "Pasture_avg_calc"]
-    wdf.loc[wdf.Animal_Product=="Primary", "bd_err"] = wdf.loc[wdf.Animal_Product=="Primary", "Pasture_avg_calc_err"]
-    wdf.loc[wdf.Animal_Product!="Primary", "bd_val"] = wdf.loc[wdf.Animal_Product!="Primary", "FAO_land_calc_m2"]
-    wdf.loc[wdf.Animal_Product!="Primary", "bd_err"] = wdf.loc[wdf.Animal_Product!="Primary", "FAO_land_calc_m2_err"]
+    # area the impact is charged against: pasture for primary, arable otherwise
+    wdf.loc[wdf.Animal_Product=="Primary", "impacted_area_m2"] = wdf.loc[wdf.Animal_Product=="Primary", "pasture_area_m2_calc"]
+    wdf.loc[wdf.Animal_Product=="Primary", "impacted_area_m2_err"] = wdf.loc[wdf.Animal_Product=="Primary", "pasture_area_m2_calc_err"]
+    wdf.loc[wdf.Animal_Product!="Primary", "impacted_area_m2"] = wdf.loc[wdf.Animal_Product!="Primary", "arable_area_m2_calc"]
+    wdf.loc[wdf.Animal_Product!="Primary", "impacted_area_m2_err"] = wdf.loc[wdf.Animal_Product!="Primary", "arable_area_m2_calc_err"]
 
-    wdf["bd_opp_cost_calc"] = wdf["bd_val"] * wdf["bd_opp_cost_m2"]
-    wdf["err"] = np.sqrt((wdf.opp_cost_err/wdf.opp_cost_val)**2 + (wdf.bd_err/wdf.bd_val)**2)
-    wdf["bd_opp_cost_calc_err"] = wdf["bd_opp_cost_calc"] * wdf["err"]
-    wdf.drop(columns=["err"], inplace=True)
+    wdf["life_extinctions_per_sp_calc"] = wdf["impacted_area_m2"] * wdf["life_extinctions_per_sp_per_m2"]
+    wdf["relerr"] = np.sqrt((wdf.life_extinctions_per_sp_per_km2_err/wdf.life_extinctions_per_sp_per_km2)**2 + (wdf.impacted_area_m2_err/wdf.impacted_area_m2)**2)
+    wdf["life_extinctions_per_sp_calc_err"] = wdf["life_extinctions_per_sp_calc"] * wdf["relerr"]
+    wdf.drop(columns=["relerr"], inplace=True)
 
     # carbon opportunity cost (COC)
     coc_path, coc_yr = fetch_coc_vals_path(year, datPath, use_2020)
@@ -224,6 +239,12 @@ def get_impacts(wdf, year, coi, filename, results_dir=Path("./results"), use_202
         # zero carbon opportunity cost in the aggregated outputs
         sys.exit(f"""No rows for coc band '{coc_band_name}' in {coc_path}; """
                  f"""available bands: {available_coc_bands}""")
+
+    # source is tonnes C per km2; convert up front so the fallbacks below are
+    # computed on the same basis as the merged values
+    coc_opp_cost = coc_opp_cost.copy()
+    coc_opp_cost["data_mean"] *= KG_CO2E_PER_TONNE_C
+    coc_opp_cost["data_mean_sem"] *= KG_CO2E_PER_TONNE_C
 
     oc_crop_coc = coc_opp_cost[(coc_opp_cost.data_mean > 0)].copy()
     oc_crop_coc_pixels = oc_crop_coc.pixel_count.sum()
@@ -237,39 +258,39 @@ def get_impacts(wdf, year, coi, filename, results_dir=Path("./results"), use_202
 
     # reshape coc_opp_cost for merging
     coc_opp_cost = coc_opp_cost[["ISO3", "item_name", "data_mean", "data_mean_sem"]]
-    coc_opp_cost = coc_opp_cost.rename(columns={"ISO3":"Country_ISO", "item_name":"spam_name", "data_mean":"coc_val", "data_mean_sem": "coc_err"})
+    coc_opp_cost = coc_opp_cost.rename(columns={"ISO3":"Country_ISO", "item_name":"spam_name", "data_mean":"carbon_kgco2e_per_km2", "data_mean_sem": "carbon_kgco2e_per_km2_err"})
 
     # calculate global averages for fallback 1
     global_coc_opp_cost = pd.DataFrame()
     for v in coc_opp_cost.spam_name.dropna().unique():
-        subset = coc_opp_cost[(coc_opp_cost.spam_name == v)&(coc_opp_cost.coc_val>0)]["coc_val"].dropna().values
+        subset = coc_opp_cost[(coc_opp_cost.spam_name == v)&(coc_opp_cost.carbon_kgco2e_per_km2>0)]["carbon_kgco2e_per_km2"].dropna().values
         mean = np.exp(np.log(subset).mean())
-        subset2 = coc_opp_cost[(coc_opp_cost.spam_name == v)&(coc_opp_cost.coc_val>0)]["coc_err"].dropna().values
+        subset2 = coc_opp_cost[(coc_opp_cost.spam_name == v)&(coc_opp_cost.carbon_kgco2e_per_km2>0)]["carbon_kgco2e_per_km2_err"].dropna().values
         err = np.exp(np.log(subset2).mean())
-        global_coc_opp_cost.loc[v, "coc_val_fallback"] = mean
-        global_coc_opp_cost.loc[v, "coc_err_fallback"] = err
+        global_coc_opp_cost.loc[v, "carbon_kgco2e_per_km2_fallback"] = mean
+        global_coc_opp_cost.loc[v, "carbon_kgco2e_per_km2_err_fallback"] = err
 
     # merge in coc data
     wdf = wdf.merge(coc_opp_cost, how="left", on=["Country_ISO", "spam_name"])
 
     # fallback 1 (global item averages)
     wdf = wdf.merge(global_coc_opp_cost, how="left", left_on=["spam_name"], right_index=True)
-    wdf.loc[(wdf.coc_val.isna())|(wdf.coc_val==0), "coc_val"] = wdf.loc[(wdf.coc_val.isna())|(wdf.coc_val==0), "coc_val_fallback"]
-    wdf.loc[(wdf.coc_err.isna())|(wdf.coc_err==0), "coc_err"] = wdf.loc[(wdf.coc_err.isna())|(wdf.coc_err==0), "coc_err_fallback"]
+    wdf.loc[(wdf.carbon_kgco2e_per_km2.isna())|(wdf.carbon_kgco2e_per_km2==0), "carbon_kgco2e_per_km2"] = wdf.loc[(wdf.carbon_kgco2e_per_km2.isna())|(wdf.carbon_kgco2e_per_km2==0), "carbon_kgco2e_per_km2_fallback"]
+    wdf.loc[(wdf.carbon_kgco2e_per_km2_err.isna())|(wdf.carbon_kgco2e_per_km2_err==0), "carbon_kgco2e_per_km2_err"] = wdf.loc[(wdf.carbon_kgco2e_per_km2_err.isna())|(wdf.carbon_kgco2e_per_km2_err==0), "carbon_kgco2e_per_km2_err_fallback"]
 
     # fallback 2 (global type averages)
-    wdf.loc[(wdf.coc_val.isna())|(wdf.coc_val==0), "coc_val"] = oc_crop_coc
-    wdf.loc[(wdf.coc_err.isna())|(wdf.coc_err==0), "coc_err"] = oc_crop_coc_err
-    wdf = wdf.drop(columns=["coc_val_fallback", "coc_err_fallback"])
+    wdf.loc[(wdf.carbon_kgco2e_per_km2.isna())|(wdf.carbon_kgco2e_per_km2==0), "carbon_kgco2e_per_km2"] = oc_crop_coc
+    wdf.loc[(wdf.carbon_kgco2e_per_km2_err.isna())|(wdf.carbon_kgco2e_per_km2_err==0), "carbon_kgco2e_per_km2_err"] = oc_crop_coc_err
+    wdf = wdf.drop(columns=["carbon_kgco2e_per_km2_fallback", "carbon_kgco2e_per_km2_err_fallback"])
 
     # convert coc from km2 to m2
-    wdf["coc_opp_cost_m2"] = wdf["coc_val"] / 1000000
+    wdf["carbon_kgco2e_per_m2"] = wdf["carbon_kgco2e_per_km2"] / 1000000
 
-    wdf["coc_opp_cost_calc"] = wdf["bd_val"] * wdf["coc_opp_cost_m2"]
-    wdf["coc_err_prop"] = np.sqrt((wdf.coc_err/wdf.coc_val)**2 + (wdf.bd_err/wdf.bd_val)**2)
-    wdf["coc_opp_cost_calc_err"] = wdf["coc_opp_cost_calc"] * wdf["coc_err_prop"]
+    wdf["ghg_coc_kgco2e_calc"] = wdf["impacted_area_m2"] * wdf["carbon_kgco2e_per_m2"]
+    wdf["relerr"] = np.sqrt((wdf.carbon_kgco2e_per_km2_err/wdf.carbon_kgco2e_per_km2)**2 + (wdf.impacted_area_m2_err/wdf.impacted_area_m2)**2)
+    wdf["ghg_coc_kgco2e_calc_err"] = wdf["ghg_coc_kgco2e_calc"] * wdf["relerr"]
 
-    wdf.drop(columns=["bd_val", "bd_err", "coc_err_prop"], inplace=True)
+    wdf.drop(columns=["impacted_area_m2", "impacted_area_m2_err", "relerr"], inplace=True)
 
     wdf.to_csv(f"{country_savefile_path}/{filename}")
     return wdf

@@ -67,7 +67,7 @@ def country_arrowplot(ax, country_df_2010, country_df_2021, region_map, regions,
             angle = angle - 180
 
         line[0].set_color("#00000000")
-        if row_2010["bd_opp_total"] > country_df_2010["bd_opp_total"].max()*0.1:
+        if row_2010["life_extinctions_per_sp_total_calc"] > country_df_2010["life_extinctions_per_sp_total_calc"].max()*0.1:
             ax.add_patch(patch)
             ax.text(*text_coords, s=row_2010["ISO"], fontsize=6, ha="center", va="center", color=color, rotation=angle)
 

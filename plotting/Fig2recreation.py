@@ -46,14 +46,14 @@ for year in os.listdir(results_dir):
         if country == ".mrio" or country == "missing_items.txt":
             continue
         df = pd.read_csv(f"{results_dir}{year}/{country}/impacts_aggregated.csv", index_col=0)
-        df = df[["Group", "bd_opp_total", "bd_opp_total_err"]]
+        df = df[["Group", "life_extinctions_per_sp_total_calc", "life_extinctions_per_sp_total_calc_err"]]
         df = df.groupby(["Group"]).sum().reset_index()
         df["Year"] = int(year)
         df["Country"] = country
         df = df.merge(area_codes, on="Country", how="left")
         df = df.merge(pop_data, left_on=["FAO_Code", "Year"], right_on=["Area Code", "Year"], how="left")
-        df["bd_opp_total"] /= (df["Value"] * 365)  # per capita per day
-        df["bd_opp_total_err"] /= (df["Value"] * 365)
+        df["life_extinctions_per_sp_total_calc"] /= (df["Value"] * 365)  # per capita per day
+        df["life_extinctions_per_sp_total_calc_err"] /= (df["Value"] * 365)
         df = df.drop(columns=["FAO_Code", "Area Code", "Value"])
         master_df = pd.concat([master_df, df], ignore_index=True)
 master_df = master_df.merge(order, on="Group")
@@ -65,10 +65,10 @@ axs = axs.flatten()
 RELATIVE = False
 
 if RELATIVE:
-    totals = master_df.groupby(["Country", "Year"])["bd_opp_total"].sum().reset_index()
-    totals = totals.rename(columns={"bd_opp_total":"Total"})
+    totals = master_df.groupby(["Country", "Year"])["life_extinctions_per_sp_total_calc"].sum().reset_index()
+    totals = totals.rename(columns={"life_extinctions_per_sp_total_calc":"Total"})
     master_df = master_df.merge(totals[["Country", "Year", "Total"]], on=["Country", "Year"])
-    master_df["bd_opp_total"] /= master_df["Total"] / 100
+    master_df["life_extinctions_per_sp_total_calc"] /= master_df["Total"] / 100
     master_df_imports = master_df.drop(columns=["Total"])
 
 
@@ -77,7 +77,7 @@ if RELATIVE:
 
 for i, country in enumerate(master_df["Country"].unique()):
     country_df = master_df[master_df["Country"] == country]
-    plot = so.Plot(country_df, x="Year", y="bd_opp_total", color="Group").add(so.Area(alpha=1), so.Stack(), legend=False)
+    plot = so.Plot(country_df, x="Year", y="life_extinctions_per_sp_total_calc", color="Group").add(so.Area(alpha=1), so.Stack(), legend=False)
     plot = plot.scale(color=color_dict)  # pyright: ignore[reportArgumentType]
     plot.on(axs[i]).plot()
     axs[i].set_title(country)

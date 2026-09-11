@@ -38,7 +38,7 @@ def country_setup():
     df_2010 = pd.read_csv(f'../results/{2010}/{c}/impacts_aggregated.csv')
     df_2021 = pd.read_csv(f'../results/{2021}/{c}/impacts_aggregated.csv')
 
-    for col in ["bd_opp_total", "Cons", "bd_opp_total_err"]:
+    for col in ["life_extinctions_per_sp_total_calc", "consumed_tonnes", "life_extinctions_per_sp_total_calc_err"]:
         df_2010[col] = df_2010[col] / 1.43e9
         df_2021[col] = df_2021[col] / 1.35e9
 
@@ -55,7 +55,7 @@ def world_setup():
     df_2010 = pd.read_csv(f'../results/{2010}/world_aggregate_impacts.csv')
     df_2021 = pd.read_csv(f'../results/{2021}/world_aggregate_impacts.csv')
 
-    for col in ["bd_opp_total", "Cons", "bd_opp_total_err", "Pasture_m2", "Arable_m2"]:
+    for col in ["life_extinctions_per_sp_total_calc", "consumed_tonnes", "life_extinctions_per_sp_total_calc_err", "pasture_area_m2_calc", "arable_area_m2_calc"]:
         df_2010[col] = df_2010[col] / world_population_2010
         df_2021[col] = df_2021[col] / world_population_2021
 
@@ -64,7 +64,7 @@ def world_setup():
     cons_impact_plot(axs[1,1], groups)
 
     feed_df_2010, feed_df_2021, pasture_df_2010, pasture_df_2021 = load_commodity("Meat of cattle with the bone; fresh or chilled")
-    beef_cons_2010 = pasture_df_2010["provenance"].sum()*1000
+    beef_cons_2010 = pasture_df_2010["provenance_tonnes"].sum()*1000
     country_df_2010, country_df_2021 = calculate_impacts(feed_df_2010, feed_df_2021, pasture_df_2010, pasture_df_2021)
     regions, region_map = get_region_map()
 
@@ -79,12 +79,12 @@ def single_plot_setup():
     # CONSUMPTION BY COUNTRY
     regions, region_map = get_region_map()
     df_2010, df_2021 = load_commodity_total(True)
-    df_2010["m2_per_kg"] = df_2010["Area"]/df_2010["Cons"]
-    df_2021["m2_per_kg"] = df_2021["Area"]/df_2021["Cons"]
-    df_2010["E_per_m2"] = df_2010["bd_opp_total"] / (df_2010["Area"])
-    df_2021["E_per_m2"] = df_2021["bd_opp_total"] / (df_2021["Area"])
-    country_arrowplot(axs[0], df_2010, df_2021, region_map, regions, df_2010["Cons"].sum()*1000, (1e-7, 1), (1e-11, 1e-7), xvar="Cons_share", yvar="E_per_kg")
-    country_arrowplot(axs[1], df_2010, df_2021, region_map, regions, df_2010["Cons"].sum()*1000, (1e-12, 1e-8), (1e3, 1e6), xvar="E_per_m2", yvar="m2_per_kg")
+    df_2010["m2_per_kg"] = df_2010["Area"]/df_2010["consumed_tonnes"]
+    df_2021["m2_per_kg"] = df_2021["Area"]/df_2021["consumed_tonnes"]
+    df_2010["E_per_m2"] = df_2010["life_extinctions_per_sp_total_calc"] / (df_2010["Area"])
+    df_2021["E_per_m2"] = df_2021["life_extinctions_per_sp_total_calc"] / (df_2021["Area"])
+    country_arrowplot(axs[0], df_2010, df_2021, region_map, regions, df_2010["consumed_tonnes"].sum()*1000, (1e-7, 1), (1e-11, 1e-7), xvar="Cons_share", yvar="E_per_kg")
+    country_arrowplot(axs[1], df_2010, df_2021, region_map, regions, df_2010["consumed_tonnes"].sum()*1000, (1e-12, 1e-8), (1e3, 1e6), xvar="E_per_m2", yvar="m2_per_kg")
     axs[0].set_xlabel("Share of global consumption")
     axs[0].set_title("Change in consumption impact between 2010 and 2021")
     axs[1].set_xlabel("Biodiversity Opportunity Cost, Extinctions per kg")
@@ -97,7 +97,7 @@ def single_plot_setup():
     # COMMODITY VECTOR PLOT
     # df_2010 = pd.read_csv(f'../results/{2010}/world_aggregate_impacts.csv')
     # df_2021 = pd.read_csv(f'../results/{2021}/world_aggregate_impacts.csv')
-    # for col in ["bd_opp_total", "Cons", "bd_opp_total_err", "Pasture_m2", "Arable_m2"]:
+    # for col in ["life_extinctions_per_sp_total_calc", "consumed_tonnes", "life_extinctions_per_sp_total_calc_err", "pasture_area_m2_calc", "arable_area_m2_calc"]:
     #     df_2010[col] = df_2010[col] / world_population_2010
     #     df_2021[col] = df_2021[col] / world_population_2021
     # groups = mosaic_plotting(None, None, df_2010, df_2021)
@@ -107,7 +107,7 @@ def single_plot_setup():
 def feed_pasture_vector_setup():
     fig, axs = get_axes(3)
     feed_df_2010, feed_df_2021, pasture_df_2010, pasture_df_2021 = load_commodity("Meat of cattle with the bone; fresh or chilled")
-    beef_cons_2010 = pasture_df_2010["provenance"].sum()*1000
+    beef_cons_2010 = pasture_df_2010["provenance_tonnes"].sum()*1000
     country_df_2010, country_df_2021 = calculate_impacts(feed_df_2010, feed_df_2021, pasture_df_2010, pasture_df_2021)
     regions, region_map = get_region_map()
 
@@ -122,11 +122,11 @@ def ellipse_setup():
     fig, axs = get_axes(1)
     regions, region_map = get_region_map()
     df_2010, df_2021 = load_commodity_total(True)
-    df_2010["m2_per_kg"] = df_2010["Area"]/df_2010["Cons"]
-    df_2021["m2_per_kg"] = df_2021["Area"]/df_2021["Cons"]
-    df_2010["E_per_m2"] = df_2010["bd_opp_total"] / (df_2010["Area"])
-    df_2021["E_per_m2"] = df_2021["bd_opp_total"] / (df_2021["Area"])
-    ellipse_plot(axs[0], df_2010, df_2021, region_map, regions, df_2010["Cons"].sum()*1000, (1e-7, 1), (1e-11, 1e-7), xvar="Cons_share", yvar="E_per_kg")
+    df_2010["m2_per_kg"] = df_2010["Area"]/df_2010["consumed_tonnes"]
+    df_2021["m2_per_kg"] = df_2021["Area"]/df_2021["consumed_tonnes"]
+    df_2010["E_per_m2"] = df_2010["life_extinctions_per_sp_total_calc"] / (df_2010["Area"])
+    df_2021["E_per_m2"] = df_2021["life_extinctions_per_sp_total_calc"] / (df_2021["Area"])
+    ellipse_plot(axs[0], df_2010, df_2021, region_map, regions, df_2010["consumed_tonnes"].sum()*1000, (1e-7, 1), (1e-11, 1e-7), xvar="Cons_share", yvar="E_per_kg")
     plt.savefig('../outputs/ellipses.png', dpi=600)
 
 

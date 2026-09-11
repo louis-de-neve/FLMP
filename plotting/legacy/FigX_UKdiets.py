@@ -57,10 +57,10 @@ cwalk = crop_db[["group_name_v6", "group_name_v7"]].drop_duplicates()
 diets = diets_dat.merge(cwalk, left_on="Group", right_on="group_name_v6", how="left")
 
 cwalk = crop_db[["Item_Code", "group_name_v7"]].drop_duplicates()
-dfx = df.groupby("ItemT_Code").sum()["bd_opp_cost_calc"].sort_values(ascending=False).reset_index()
+dfx = df.groupby("ItemT_Code").sum()["life_extinctions_per_sp_calc"].sort_values(ascending=False).reset_index()
 dfx = dfx.merge(cwalk, left_on="ItemT_Code", right_on="Item_Code", how="left")
 
-dfxx = dfx.groupby("group_name_v7").sum()["bd_opp_cost_calc"].reset_index()
+dfxx = dfx.groupby("group_name_v7").sum()["life_extinctions_per_sp_calc"].reset_index()
 
 fig, ax = plt.subplots(figsize=(7, 6))
 
@@ -81,7 +81,7 @@ for d, diet in enumerate(diets_dat.columns[1:]):
     total_height = 0
     for g, group in enumerate(dfxx["group_name_v7"].unique()):
         
-        group_impact = dfxx[dfxx["group_name_v7"] == group]["bd_opp_cost_calc"].values[0]
+        group_impact = dfxx[dfxx["group_name_v7"] == group]["life_extinctions_per_sp_calc"].values[0]
 
         diet_base = diets.loc[diets["group_name_v7"] == group, diet].sum()
         base_base = diets.loc[diets["group_name_v7"] == group, "Baseline"].sum()

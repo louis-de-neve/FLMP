@@ -46,26 +46,26 @@ for year in os.listdir(results_dir):
     for country in ["GBR", "POL", "CHN", "IND", "RWA", "USA"]:
 
         df1 = pd.read_csv(f"{results_dir}{year}/{country}/df_{country.lower()}.csv", index_col=0)
-        df1 = df1[["Group", "bd_opp_total", "bd_opp_total_err"]]
+        df1 = df1[["Group", "life_extinctions_per_sp_total_calc", "life_extinctions_per_sp_total_calc_err"]]
         df1 = df1.groupby(["Group"]).sum().reset_index()
         df1["Year"] = int(year)
         df1["Country"] = country
         df1 = df1.merge(area_codes, on="Country", how="left")
         df1 = df1.merge(pop_data, left_on=["FAO_Code", "Year"], right_on=["Area Code", "Year"], how="left")
-        df1["bd_opp_total"] /= (df1["Value"] * 365)  # per capita per day
-        df1["bd_opp_total_err"] /= (df1["Value"] * 365)
+        df1["life_extinctions_per_sp_total_calc"] /= (df1["Value"] * 365)  # per capita per day
+        df1["life_extinctions_per_sp_total_calc_err"] /= (df1["Value"] * 365)
         df1 = df1.drop(columns=["FAO_Code", "Area Code", "Value"])
         master_df_local = pd.concat([master_df_local, df1], ignore_index=True)
 
         df2 = pd.read_csv(f"{results_dir}{year}/{country}/df_os.csv", index_col=0)
-        df2 = df2[["Group", "bd_opp_total", "bd_opp_total_err"]]
+        df2 = df2[["Group", "life_extinctions_per_sp_total_calc", "life_extinctions_per_sp_total_calc_err"]]
         df2 = df2.groupby(["Group"]).sum().reset_index()
         df2["Year"] = int(year)
         df2["Country"] = country
         df2 = df2.merge(area_codes, on="Country", how="left")
         df2 = df2.merge(pop_data, left_on=["FAO_Code", "Year"], right_on=["Area Code", "Year"], how="left")
-        df2["bd_opp_total"] /= (df2["Value"] * 365)  # per capita per day
-        df2["bd_opp_total_err"] /= (df2["Value"] * 365)
+        df2["life_extinctions_per_sp_total_calc"] /= (df2["Value"] * 365)  # per capita per day
+        df2["life_extinctions_per_sp_total_calc_err"] /= (df2["Value"] * 365)
         df2 = df2.drop(columns=["FAO_Code", "Area Code", "Value"])
         master_df_imports = pd.concat([master_df_imports, df2], ignore_index=True)
 
@@ -74,8 +74,8 @@ for year in os.listdir(results_dir):
 master_df_local = master_df_local.merge(order, on="Group")
 master_df_local = master_df_local.sort_values(["Country", "Year", "Order"])
 master_df_local = master_df_local.drop(columns=["Order"])
-master_df_local["bd_opp_total"] *= -1
-master_df_local["bd_opp_total_err"] *= -1
+master_df_local["life_extinctions_per_sp_total_calc"] *= -1
+master_df_local["life_extinctions_per_sp_total_calc_err"] *= -1
 
 master_df_imports = master_df_imports.merge(order, on="Group")
 master_df_imports = master_df_imports.sort_values(["Country", "Year", "Order"])
@@ -87,12 +87,12 @@ axs = axs.flatten()
 
 for i, country in enumerate(master_df_local["Country"].unique()):
     country_df_local = master_df_local[master_df_local["Country"] == country]
-    plot = so.Plot(country_df_local, x="Year", y="bd_opp_total", color="Group").add(so.Area(alpha=1), so.Stack(), legend=False)
+    plot = so.Plot(country_df_local, x="Year", y="life_extinctions_per_sp_total_calc", color="Group").add(so.Area(alpha=1), so.Stack(), legend=False)
     plot = plot.scale(color=color_dict) # pyright: ignore[reportArgumentType]
     plot.on(axs[i]).plot()
 
     country_df_imports = master_df_imports[master_df_imports["Country"] == country]
-    plot = so.Plot(country_df_imports, x="Year", y="bd_opp_total", color="Group").add(so.Area(alpha=1), so.Stack(), legend=False)
+    plot = so.Plot(country_df_imports, x="Year", y="life_extinctions_per_sp_total_calc", color="Group").add(so.Area(alpha=1), so.Stack(), legend=False)
     plot = plot.scale(color=color_dict) # pyright: ignore[reportArgumentType]
     plot.on(axs[i]).plot()
 

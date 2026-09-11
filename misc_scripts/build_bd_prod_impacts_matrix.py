@@ -19,9 +19,8 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-RESULTS_DIR = REPO_ROOT / "results" / "mrio_pipeline_results_260826_spam2020"
-INPUT_DATA_DIR = REPO_ROOT / "mrio_pipeline" / "input_data"
+RESULTS_DIR = Path("../flmp_results/flmp_results_261009")
+INPUT_DATA_DIR = Path("input_data")
 YEAR = 2021
 
 USECOLS = [
@@ -30,11 +29,11 @@ USECOLS = [
     "Animal_Product_Code",
     "ItemT_Code",
     "ItemT_Name",
-    "provenance",
-    "bd_opp_cost_calc",
-    "bd_opp_cost_calc_err",
+    "provenance_tonnes",
+    "life_extinctions_per_sp_calc",
+    "life_extinctions_per_sp_calc_err",
 ]
-VALUE_COLS = ["bd_opp_cost_calc", "bd_opp_cost_calc_err", "production_tonnes"]
+VALUE_COLS = ["life_extinctions_per_sp_calc", "life_extinctions_per_sp_calc_err", "production_tonnes"]
 GROUPING = "group_name_v6"
 
 
@@ -61,7 +60,7 @@ def build_prod_impacts_long(results_dir: Path, year: int) -> tuple[pd.DataFrame,
         df["Effective_Producer_Code"] = df["Producer_Country_Code"].where(
             is_primary, df["Consumer_Country_Code"]
         )
-        df["production_tonnes"] = df["provenance"].where(is_primary, 0.0)
+        df["production_tonnes"] = df["provenance_tonnes"].where(is_primary, 0.0)
 
         item_names.update(
             df[["ItemT_Code", "ItemT_Name"]].dropna().drop_duplicates().set_index("ItemT_Code")["ItemT_Name"]
@@ -131,9 +130,9 @@ def build_matrices(long_df: pd.DataFrame, level: str) -> tuple[pd.DataFrame, pd.
     df = long_df.dropna(subset=["Country", level])
     df = df.groupby(["Country", level], as_index=False)[VALUE_COLS].sum()
 
-    df["impact_per_kg"] = impact_per_kg(df["bd_opp_cost_calc"], df["production_tonnes"])
+    df["impact_per_kg"] = impact_per_kg(df["life_extinctions_per_sp_calc"], df["production_tonnes"])
     df["impact_per_kg_err"] = mask_undefined_errors(
-        impact_per_kg(df["bd_opp_cost_calc_err"], df["production_tonnes"]), level
+        impact_per_kg(df["life_extinctions_per_sp_calc_err"], df["production_tonnes"]), level
     )
 
     matrix = df.pivot(index="Country", columns=level, values="impact_per_kg")
@@ -152,9 +151,9 @@ if __name__ == "__main__":
     long_df, item_names = build_prod_impacts_long(args.results_dir, args.year)
     long_df = add_labels(long_df, item_names, args.input_data_dir)
 
-    long_df["impact_per_kg"] = impact_per_kg(long_df["bd_opp_cost_calc"], long_df["production_tonnes"])
+    long_df["impact_per_kg"] = impact_per_kg(long_df["life_extinctions_per_sp_calc"], long_df["production_tonnes"])
     long_df["impact_per_kg_err"] = mask_undefined_errors(
-        impact_per_kg(long_df["bd_opp_cost_calc_err"], long_df["production_tonnes"]),
+        impact_per_kg(long_df["life_extinctions_per_sp_calc_err"], long_df["production_tonnes"]),
         "long-format",
     )
 
@@ -176,8 +175,8 @@ if __name__ == "__main__":
             "ItemT_Code",
             "ItemT_Name",
             GROUPING,
-            "bd_opp_cost_calc",
-            "bd_opp_cost_calc_err",
+            "life_extinctions_per_sp_calc",
+            "life_extinctions_per_sp_calc_err",
             "production_tonnes",
             "impact_per_kg",
             "impact_per_kg_err",

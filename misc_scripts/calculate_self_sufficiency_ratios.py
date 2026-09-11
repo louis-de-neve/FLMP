@@ -41,11 +41,11 @@ def calculate_self_sufficiency_ratios(results_dir: Path, countries=None, years=N
             df_imported = pd.read_csv(c_dir / f"df_os.csv")
             df_full = pd.read_csv(c_dir / f"impacts_full.csv")
 
-            domestic_no_feed = df_c.tonnage.sum()
-            imported_no_feed = df_imported.tonnage.sum()
+            domestic_no_feed = df_c.throughput_tonnes.sum()
+            imported_no_feed = df_imported.throughput_tonnes.sum()
 
-            domestic_full = df_full[df_full.Country_ISO == c.upper()].provenance.sum()
-            imported_full = df_full[df_full.Country_ISO != c.upper()].provenance.sum()
+            domestic_full = df_full[df_full.Country_ISO == c.upper()].provenance_tonnes.sum()
+            imported_full = df_full[df_full.Country_ISO != c.upper()].provenance_tonnes.sum()
 
             new_row = pd.DataFrame([{
                 "country": c,
