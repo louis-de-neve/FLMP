@@ -7,8 +7,12 @@ Where build_bd_cons_impacts_matrix.py answers "what does a tonne of commodity X
 consumed by country Y cost?", this answers "what does a kilogram of commodity X
 *produced* in country Y cost?". Every consumer country's impacts_full.csv is read
 and each row reattributed to the country that actually produced it, following the
-logic of plotting/Fig1recreation.py. Extinctions only - the cost-of-conservation
-columns (coc_*) are ignored.
+logic of plotting/Fig1recreation.py.
+
+The same is done for every impact in impacts_full.csv (arable and pasture area,
+extinctions, production GHG and carbon opportunity cost), split into the direct
+part (the crop itself, or the pasture for an animal product) and the feed part,
+and written to prod_impacts_long_<year>.csv plus one item matrix per impact.
 """
 
 import argparse
@@ -23,6 +27,13 @@ RESULTS_DIR = Path("../flmp_results/flmp_results_261009")
 INPUT_DATA_DIR = Path("input_data")
 YEAR = 2021
 
+IMPACT_COLS = [
+    "arable_area_m2_calc",
+    "pasture_area_m2_calc",
+    "life_extinctions_per_sp_calc",
+    "ghg_prod_kgco2e_calc",
+    "ghg_coc_kgco2e_calc",
+]
 USECOLS = [
     "Consumer_Country_Code",
     "Producer_Country_Code",
@@ -30,10 +41,15 @@ USECOLS = [
     "ItemT_Code",
     "ItemT_Name",
     "provenance_tonnes",
-    "life_extinctions_per_sp_calc",
-    "life_extinctions_per_sp_calc_err",
+] + [c for col in IMPACT_COLS for c in (col, f"{col}_err")]
+# each impact (and its error) is also split into the direct part (crop or pasture
+# rows) and the feed part, e.g. arable_area_m2_calc_direct, arable_area_m2_calc_feed_err
+SPLIT_COLS = [
+    f"{col}_{part}{suffix}" for col in IMPACT_COLS for part in ("direct", "feed") for suffix in ("", "_err")
 ]
-VALUE_COLS = ["life_extinctions_per_sp_calc", "life_extinctions_per_sp_calc_err", "production_tonnes"]
+VALUE_COLS = (
+    [c for col in IMPACT_COLS for c in (col, f"{col}_err")] + SPLIT_COLS + ["production_tonnes"]
+)
 GROUPING = "group_name_v6"
 
 
@@ -61,6 +77,10 @@ def build_prod_impacts_long(results_dir: Path, year: int) -> tuple[pd.DataFrame,
             is_primary, df["Consumer_Country_Code"]
         )
         df["production_tonnes"] = df["provenance_tonnes"].where(is_primary, 0.0)
+        for col in IMPACT_COLS:
+            for suffix in ("", "_err"):
+                df[f"{col}_direct{suffix}"] = df[f"{col}{suffix}"].where(is_primary, 0.0)
+                df[f"{col}_feed{suffix}"] = df[f"{col}{suffix}"].where(~is_primary, 0.0)
 
         item_names.update(
             df[["ItemT_Code", "ItemT_Name"]].dropna().drop_duplicates().set_index("ItemT_Code")["ItemT_Name"]
@@ -118,7 +138,7 @@ def mask_undefined_errors(err: pd.Series, label: str) -> pd.Series:
     if undefined.any():
         print(
             f"Warning: {undefined.sum()} {label} cells have an undefined error "
-            f"(inf bd_opp_cost_calc_err upstream) and are written as NaN"
+            f"(inf error upstream) and are written as NaN"
         )
     return err.mask(undefined)
 
@@ -139,6 +159,23 @@ def build_matrices(long_df: pd.DataFrame, level: str) -> tuple[pd.DataFrame, pd.
     err_matrix = df.pivot(index="Country", columns=level, values="impact_per_kg_err")
 
     return matrix, err_matrix
+
+
+def add_per_kg_columns(long_df: pd.DataFrame) -> pd.DataFrame:
+    """Per kg of production for every impact: total, direct and feed parts, and
+    the error of the total (direct and feed errors summed linearly)."""
+
+    long_df = long_df.copy()
+    tonnes = long_df["production_tonnes"]
+    for col in IMPACT_COLS:
+        long_df[f"{col}_per_kg"] = impact_per_kg(long_df[col], tonnes)
+        long_df[f"{col}_per_kg_err"] = mask_undefined_errors(
+            impact_per_kg(long_df[f"{col}_err"], tonnes), f"{col} long-format"
+        )
+        for part in ("direct", "feed"):
+            long_df[f"{col}_{part}_per_kg"] = impact_per_kg(long_df[f"{col}_{part}"], tonnes)
+
+    return long_df
 
 
 if __name__ == "__main__":
@@ -185,3 +222,25 @@ if __name__ == "__main__":
 
     print(f"Wrote {item_matrix.shape[0]} x {item_matrix.shape[1]} item matrices to {out_dir}")
     print(f"Wrote {group_matrix.shape[0]} x {group_matrix.shape[1]} group matrices to {out_dir}")
+
+    # all impacts, per kg of production, direct and feed parts kept separate
+    all_impacts = add_per_kg_columns(long_df)
+    per_kg_cols = [
+        c for col in IMPACT_COLS
+        for c in (f"{col}_per_kg", f"{col}_per_kg_err", f"{col}_direct_per_kg", f"{col}_feed_per_kg")
+    ]
+    all_impacts[
+        ["Country", "Effective_Producer_Code", "ItemT_Code", "ItemT_Name", GROUPING, "production_tonnes"]
+        + [c for col in IMPACT_COLS for c in (col, f"{col}_err")]
+        + SPLIT_COLS
+        + per_kg_cols
+    ].to_csv(out_dir / f"prod_impacts_long_{args.year}.csv", index=False)
+
+    labelled = all_impacts.dropna(subset=["Country", "ItemT_Name"])
+    for col in IMPACT_COLS:
+        for suffix in ("", "_err"):
+            labelled.pivot(index="Country", columns="ItemT_Name", values=f"{col}_per_kg{suffix}").to_csv(
+                out_dir / f"prod_{col}_per_kg_item{suffix}_{args.year}.csv"
+            )
+
+    print(f"Wrote prod_impacts_long_{args.year}.csv and {2 * len(IMPACT_COLS)} per-impact item matrices to {out_dir}")

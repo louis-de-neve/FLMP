@@ -11,7 +11,8 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-RESULTS_DIR = Path("../flmp_results/flmp_results_261009")
+RESULTS_DIR = Path("../outputs/flmp_results/flmp_results_261010")
+OUT_DIR = RESULTS_DIR / "impacts_matrices"
 YEAR = 2021
 
 
@@ -48,7 +49,7 @@ if __name__ == "__main__":
 
     matrix, err_matrix = build_bd_intensity_matrix(args.results_dir, args.year)
 
-    out_dir = args.results_dir / "impacts_matrices"
+    out_dir = OUT_DIR
     out_dir.mkdir(exist_ok=True)
 
     matrix.to_csv(out_dir / f"bd_opp_per_tonne_used_{args.year}.csv")

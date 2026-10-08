@@ -41,7 +41,6 @@ def main(year, country_of_interest, sua, historic="", results_dir=Path("./result
         country_code = area_codes[area_codes["ISO3"] == country_of_interest]["FAOSTAT"].values[0]
     else:
         country_code = "WORLD"
-    weighing_factors = pd.read_csv(f"{datPath}/weighing_factors.csv", encoding = "latin-1")
 
     prov_mat_no_feed = pd.read_csv(trade_nofeed)
     prov_mat_feed = pd.read_csv(trade_feed)
@@ -77,29 +76,10 @@ def main(year, country_of_interest, sua, historic="", results_dir=Path("./result
     human_consumed = pd.concat([alpha, gamma], ignore_index=True)
     human_consumed = human_consumed[human_consumed.Consumer_Country_Code == country_code]
 
-    alpha = alpha.merge(weighing_factors[["Item_Code", "Weighing factors"]], on="Item_Code", how="left")
-    alpha["Weighted_Value"] = alpha["Value"] * alpha["Weighing factors"]
-    totals = alpha.groupby(["Producer_Country_Code", "Item_Code"])["Weighted_Value"].sum().reset_index()
-    totals["Total"] = totals["Weighted_Value"]
-    totals = totals.drop(columns=["Weighted_Value"])
-    alpha = alpha.merge(totals, on=["Producer_Country_Code", "Item_Code"], how="left")
-    alpha["Proportion"] = alpha["Weighted_Value"] / alpha["Total"]
-    alpha = alpha.drop(columns=["Total"])
-
-
-    animals_consumed_in_country = alpha[alpha.Consumer_Country_Code == country_code].copy()
-    
-    # alpha2=add_cols(animals_consumed_in_country, area_codes, item_codes)
-    # print(alpha2[alpha2.Animal_Product=="Primary"].groupby(["Item"])["Value"].sum())
-    
-    animals_consumed_in_country["match_code"] = animals_consumed_in_country["Producer_Country_Code"].astype(str) + "_" + animals_consumed_in_country["Item_Code"].astype(str)
-    beta["match_code"] = beta["Consumer_Country_Code"].astype(str) + "_" + beta["Animal_Product_Code"].astype(str)
-    feed = beta[beta["match_code"].isin(animals_consumed_in_country["match_code"])]
-
-    feed = feed.merge(animals_consumed_in_country[["match_code", "Proportion"]], on="match_code", how="left")
-    feed["Value"] = feed["Value"] * feed["Proportion"]
-    feed["Error"] = feed["Error"] * feed["Proportion"]
-    feed = feed.drop(columns=["match_code", "Proportion"])
+    # TradeMatrixFeed's feed rows are already each consuming country's feed footprint
+    # (feed embodied in the animal products it consumes, by feed origin), so take this
+    # country's rows as they are
+    feed = beta[beta["Consumer_Country_Code"] == country_code].copy()
     feed = feed[feed.Value > 0.015]
     human_consumed = human_consumed[human_consumed.Value > 0.015]
 
