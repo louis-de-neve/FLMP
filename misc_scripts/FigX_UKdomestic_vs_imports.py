@@ -6,8 +6,8 @@ from pathlib import Path
 
 country = "GBR"
 
-results_file = Path(f"C:\\Users\\Thomas Ball\\OneDrive - University of Cambridge\\Work\\Leakage_ratios\\results\\mrio_pipeline_results_260826\\2021\\{country}\\impacts_full.csv")
-save_dir = Path("C:\\Users\\Thomas Ball\\OneDrive - University of Cambridge\\Work\\Work for others\\Andrew DEFRA 8sept")
+results_file = Path(f"/maps/tsb42/flmp/flmp_results/261019/2021/{country}/impacts_full.csv")
+save_dir = Path("../261019/figs/")
 
 spdf = pd.read_csv("input_data/mapspam_outputs/outputs/2020/processed_results_2020.csv")
 sp_count = spdf.sp_count.max()
@@ -97,6 +97,7 @@ ax2.legend(*ax1.get_legend_handles_labels(),
 
 fig.tight_layout()
 
+save_dir.mkdir(parents=True, exist_ok=True)
 fig.savefig(save_dir / "UK_domestic_vs_imported.png", dpi=300, bbox_inches="tight")
 
 plt.show()

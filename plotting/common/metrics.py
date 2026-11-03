@@ -68,12 +68,13 @@ class Metric:
     per_capita_day_ylim: tuple[float, float]
     """Sensible log-scale range for a per-capita-per-day total axis."""
 
-    normalise_by_species_count: bool = False
-    """Whether figures should divide totals by the MAPSPAM species count.
+    per_species: bool = False
+    """Whether values are a mean change in extinction risk *per species*.
 
-    Extinction figures report a mean change in risk *per species*, so they
-    divide the summed delta-E by the number of species assessed. Emissions are
-    absolute mass and take no such divisor.
+    The LIFE delta-E columns already are: provenance/_get_impacts_bd.py takes
+    deltaE_mean as-is and never multiplies by sp_count, hence the `_per_sp_` in
+    the column names. Figures must not divide by the species count again.
+    Only affects axis labels.
     """
 
     amortized: bool = False
@@ -118,7 +119,7 @@ LIFE_EXTINCTIONS = Metric(
     label_per_capita_day=r"Extinctions per capita per day ($\Delta$E)",
     per_kg_ylim=(1e-13, 1e-7),
     per_capita_day_ylim=(1e-13, 1e-7),
-    normalise_by_species_count=True,
+    per_species=True,
 )
 
 GHG_PROD = Metric(

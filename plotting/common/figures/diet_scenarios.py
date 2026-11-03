@@ -110,14 +110,6 @@ def load_group_impacts(
     return totals
 
 
-def species_count(spam_year: int = 2020) -> float:
-    """Number of species assessed in the LIFE/MAPSPAM layer."""
-    path = paths.mapspam_results_file(spam_year)
-    if not path.exists():
-        raise FileNotFoundError(f"MAPSPAM results not found: {path}")
-    return pd.read_csv(path, usecols=["sp_count"])["sp_count"].max()
-
-
 def resolve_population(country: str, year: int) -> float:
     """FAOSTAT population, falling back to the original script's constants."""
     area_codes = style.load_area_codes("FAO_Code")
@@ -138,10 +130,13 @@ def resolve_population(country: str, year: int) -> float:
 def normalisation(
     metric: Metric, population: float, amortization_years: int
 ) -> float:
-    """Factor turning a national total into a per-person, per-day figure."""
+    """Factor turning a national total into a per-person, per-day figure.
+
+    No species-count divisor: the extinction columns are already per species
+    (see `Metric.per_species`). The original script divided by sp_count again,
+    which put values ~3e4 too low.
+    """
     factor = 1.0 / (population * 365)
-    if metric.normalise_by_species_count:
-        factor /= species_count()
     if metric.amortized:
         factor /= amortization_years
     return factor
@@ -306,7 +301,7 @@ def _legend(ax, groups, colors, metrics: list[Metric]) -> None:
 
 
 def _ylabel(metrics: list[Metric]) -> str:
-    if metrics[0].normalise_by_species_count:
+    if metrics[0].per_species:
         return r"Mean change in extinction risk" "\n" r"($\Delta E$ per sp., per capita per day)"
     return f"Emissions per capita per day ({metrics[0].unit})"
 

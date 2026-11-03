@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from pathlib import Path
 
-results_dir = Path("../flmp_results/flmp_results_261010")
+results_dir = Path(f"/maps/tsb42/flmp/flmp_results/261019/")
 year=2021
 
 df = pd.DataFrame()
